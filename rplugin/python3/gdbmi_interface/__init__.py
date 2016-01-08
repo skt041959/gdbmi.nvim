@@ -3,7 +3,7 @@ import traceback
 
 import neovim
 
-from gdbmi import Session
+from .gdbmi.session import Session
 
 
 @neovim.plugin
@@ -33,11 +33,11 @@ class GDBMI_plugin():
             if b.number == bufnr:
                 filename = b.name
                 break
-        self.session.breakswitch(name, line)
+        self.session.breakswitch(filename, line)
 
 
-def main(debugee):
-    session = Session(debugee)
+def main(vim):
+    plugin_instance = GDBMI_plugin(vim)
 
 if __name__ == "__main__":
     import sys

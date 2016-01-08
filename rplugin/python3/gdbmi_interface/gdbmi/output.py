@@ -1,4 +1,3 @@
-#!/usr/bin/python
 PARSERS = []
 
 def _parser_(cls):
@@ -185,4 +184,4 @@ class Terminator(_Output):
 
 
 if __name__ == "__main__":
-    print PARSERS
+    print(PARSERS)

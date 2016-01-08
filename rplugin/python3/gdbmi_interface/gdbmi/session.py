@@ -7,8 +7,7 @@ import logging
 import select
 import re
 
-import output
-
+from . import output
 
 class Session(object):
     def __init__(self, debuggee, gdb="gdb"):
