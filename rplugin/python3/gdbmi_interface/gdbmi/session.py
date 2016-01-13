@@ -46,7 +46,7 @@ class Session(object):
         self.exec_state = None
         self.token = 0
         self.token_re = re.compile('\d+')
-        logging.warn(['session', debuggee, 'gdb', gdb])
+        logging.debug(['session:', debuggee, 'gdb:', gdb])
 
     def dump_obj(self, token, obj):
         logging.error(['##### DUMP:', token, obj])

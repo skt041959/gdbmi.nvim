@@ -4,6 +4,9 @@ if exists('g:loaded_gdbmi') || !has('nvim') || !has('python')
 endif
 let g:loaded_gdbmi = 1
 
+if !exists('g:gdbmi#init#gdb')
+    let g:gdbmi#init#gdb = 'gdb'
+endif
 if !exists('g:gdbmi#session#file')
   let g:gdbmi#session#file = 'gdbmi-nvim.json'
 endif
@@ -31,3 +34,7 @@ execute 'sign define gdbsign_pcsel text=' . s:pc_symbol .
 
 execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
     \ ' texthl=GDBUnselectedPCSign linehl=GDBUnselectedPCLine'
+
+GdbmiInitializePython
+call gdbmi#util#define_commands()
+
