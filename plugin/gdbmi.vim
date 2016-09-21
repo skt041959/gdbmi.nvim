@@ -35,6 +35,5 @@ execute 'sign define gdbsign_pcsel text=' . s:pc_symbol .
 execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
     \ ' texthl=GDBUnselectedPCSign linehl=GDBUnselectedPCLine'
 
-GdbmiInitializePython
 call gdbmi#util#define_commands()
 

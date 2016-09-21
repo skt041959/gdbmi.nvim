@@ -1,38 +1,80 @@
 #!/usr/bin/python
 
-import subprocess
-import fcntl
 import os
+import sys
+import fcntl
 import logging
-import select
+import functools
 import re
+from threading import Thread
+
+if sys.platform == 'win32':
+    from asyncio.windows_utils import Popen, PIPE
+    from asyncio.windows_events import ProactorEventLoop
+else:
+    from subprocess import Popen, PIPE
 
 from . import output
+from .loop import GDBmiLoop
+
+
+class ErrorArgumentsException(Exception):
+    pass
+
+def exception(logger):
+    """
+    A decorator that wraps the passed in function and logs
+    exceptions should one occur
+
+    @param logger: The logging object
+    """
+
+    def decorator(func):
+
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except:
+                # log the exception
+                err = "There was an exception in  "
+                err += func.__name__
+                logger.exception(err)
+
+            # re-raise the exception
+            raise
+        return wrapper
+    return decorator
 
 class Session(object):
     def __init__(self, debuggee, gdb="gdb"):
         """
         >>> p = Session("test/hello")
         """
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+
         self.debuggee = debuggee
 
-        p = subprocess.Popen(
+        p = Popen(
             bufsize = 0,
-            args = [gdb,
-                    '--return-child-result',
-                    '--quiet', # inhibit dumping info at start-up
-                    '--nx', # inhibit window interface
-                    '--nw', # ignore .gdbinit
-                    '--interpreter=mi2', # use GDB/MI v2
-                    #'--write', # to-do: allow to modify executable/cores?
-                    self.debuggee],
-            stdin = subprocess.PIPE, stdout = subprocess.PIPE,
+            args = [
+                gdb,
+                '--return-child-result',
+                '--quiet', # inhibit dumping info at start-up
+                '--nx', # inhibit window interface
+                '--nw', # ignore .gdbinit
+                '--interpreter=mi2', # use GDB/MI v2
+                #'--write', # to-do: allow to modify executable/cores?
+                self.debuggee,
+            ],
+            stdin = PIPE, stdout = PIPE,
             close_fds = True
         )
         fl = fcntl.fcntl(p.stdout, fcntl.F_GETFL)
         fcntl.fcntl(p.stdout, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
         self.process = p
+
         self.buf = ""
         self.is_attached = False
 
@@ -46,26 +88,8 @@ class Session(object):
         self.exec_state = None
         self.token = 0
         self.token_re = re.compile('\d+')
-        logging.debug(['session:', debuggee, 'gdb:', gdb])
 
-    def dump_obj(self, token, obj):
-        logging.error(['##### DUMP:', token, obj])
-
-    def hijack_function(self, name, replacement):
-        def thunk(token, obj):
-            replacement(obj)
-
-        def register_replacement(token, obj):
-            self.dump_obj(token, obj)
-
-        return self.break_insert(name, register_replacement)
-
-    def start(self, token = ""):
-        if self.is_attached:
-            raise ValueError()
-
-        self.send("-break-insert main")
-        return self
+        self.logger.debug("session: %s gdb: %s" % (debuggee, gdb))
 
     def break_insert(self, location, handler = None):
         return self.send("-break-insert " + location, handler)
@@ -84,13 +108,11 @@ class Session(object):
     def send(self, cmd, handler = None):
         self.token += 1
         token = "%04d" % self.token
-        p = self.process
-        p.stdin.write(token + cmd + "\n")
-        p.stdin.flush()
-        logging.warn(["SENT[" + token +"]:", cmd])
-        self.commands[token] = {'cmd': cmd,
-                                'handler': handler,
-                                }
+        buf = token + cmd + "\n"
+        self.process.stdin.write(buf)
+
+        self.logger.debug(["SENT[" + token +"]:", cmd])
+        self.commands[token] = {'cmd': cmd, 'handler': handler}
         return token
 
     def _read(self, blocking = 0):
@@ -104,26 +126,26 @@ class Session(object):
 
     def _parse_line(self, line):
         token = ""
-        logging.debug(["RAW:", line])
+        self.logger.debug(["RAW:", line])
 
         if not line:
             return
 
         if line.startswith('(gdb)'):
             # terminator
-            yield (token, output.Terminator())
-            return
+            return (token, output.Terminator())
+
         m = self.token_re.match(line)
         if m:
             token = line[m.start(): m.end()]
-            line = line[m.end()]
+            line = line[m.end():]
+            self.logger.debug(line)
+
         for klass in output.PARSERS:
             if line.startswith(klass.TOKEN):
-                yield (token, klass(line))
-                return
-
-        logging.warn([line])
-        #raise ValueError((token, line))
+                return (token, klass(line))
+        else:
+            raise ValueError((token, line))
 
     def _handle_exec(self, token, obj):
         if obj.what == "stopped":
@@ -145,25 +167,25 @@ class Session(object):
     def _handle_notify(self, token, obj):
         if obj.what == "thread-group-added":
             tg = self._add_thread_group(obj.args)
-            logging.info(tg)
+            self.logger.info(tg)
             return True
 
         if obj.what == "thread-group-started":
             tg = self.thread_groups[obj.args['id']]
             tg['pid'] = obj.args['pid']
-            logging.info(tg)
+            self.logger.info(tg)
             return True
 
         if obj.what == "thread-created":
             tg = self.thread_groups[obj.args['group-id']]
             tg['threads'].add(obj.args['id'])
-            logging.info(tg)
+            self.logger.info(tg)
             return True
 
         if obj.what == "library-loaded":
             tg = self.thread_groups[obj.args['thread-group']]
             tg['dl'][obj.args['id']] = obj.args
-            logging.info(tg)
+            self.logger.info(tg)
             return True
 
         if obj.what == "breakpoint-modified":
@@ -180,7 +202,7 @@ class Session(object):
             "dl": {},
         }
         self.thread_groups[group_id] = tg
-        logging.info(tg)
+        self.logger.info(tg)
 
     def add_callback(self, target, proc, filter = None, *kwds):
         to_add = {
@@ -206,7 +228,7 @@ class Session(object):
         else:
             self.breakpoints[number] = dict(info)
 
-        logging.info(['updated BREAKPOINT', self.breakpoints[number]])
+        self.logger.info(['updated BREAKPOINT', self.breakpoints[number]])
         self._callback('bkpt')
 
     def _handle(self, token, obj):
@@ -219,11 +241,11 @@ class Session(object):
         }.get(obj.TOKEN, None)
 
         if not (handler and handler(token, obj)):
-            logging.warn(["IGN:", token, obj])
+            self.logger.warn(["IGN:", token, obj])
 
     def read(self, blocking = 0):
         for src in self._read(blocking):
-            self.buf += src
+            self.buf += src.decode('utf8')
             while True:
                 (line, sep, self.buf) = self.buf.partition('\n')
                 if sep:
@@ -233,9 +255,6 @@ class Session(object):
                     else:
                         self.buf = line
                     break
-
-    def is_running(self):
-        return (self.process.poll() is None)
 
     def wait_for(self, stop_token = None):
         for token, obj in self.read(1):
@@ -249,4 +268,16 @@ class Session(object):
         slave_node = "/proc/%d/fd/%d" % (pid, slave)
 
         return (self.send("-inferior-tty-set " + slave_node), master)
+
+    def do_breakswitch(self, **kwargs):
+        self.logger.debug("breakswitch %s: %s" % (filename, line))
+
+        if "filename" in kwargs and "line" in kwargs:
+            l = "%s:%s" % (filename,line)
+        elif "function" in kwargs:
+            l = kwargs["function"]
+        else:
+            return
+
+        return self.break_insert(location=l)
 

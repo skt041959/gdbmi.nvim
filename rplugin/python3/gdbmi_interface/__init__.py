@@ -25,22 +25,26 @@ class GDBMI_plugin():
 
     @neovim.command('GdbmiInitializePython', sync=True, nargs=0)
     def init_python(self):
-        self._error("pid : %s" % os.getpid())
+        self.vim.vars['gdbmi#_python_pid'] = os.getpid()
         self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
 
     @neovim.rpc_export('launchgdb')
     def launchgdb(self, args):
         debugee = args[0]
-        self._error(repr(debugee))
         self.session = Session(debugee)
 
     @neovim.rpc_export('breakswitch')
-    def breakswitch(self, bufnr, line):
+    def breakswitch(self, args):
+        (bufnr, line) = args
         for b in self.vim.buffers:
             if b.number == bufnr:
                 filename = b.name
                 break
-        self.session.breakswitch(filename, line)
+        else:
+            self._error("not found buffer")
+            return
+
+        self.session.do_breakswitch(filename, line)
 
 
 def main(vim):
