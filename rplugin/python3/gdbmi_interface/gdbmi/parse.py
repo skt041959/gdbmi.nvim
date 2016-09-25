@@ -38,18 +38,10 @@ master_pat = re.compile('|'.join([TOKEN_NUM, RESULT_CLASS,
                         )
 
 Token = collections.namedtuple('Token', ['type', 'value'])
-ResultRecord = collections.namedtuple('ResultRecord', ['result_class', 'results'])
-AsyncRecord = collections.namedtuple('AsyncRecord', ['async_class', 'name', 'results'])
-StreamRecord = collections.namedtuple('StreamRecord', ['stream_class', 'output'])
+ResultRecord = collections.namedtuple('ResultRecord', ['What', 'result_class', 'results'])
+AsyncRecord  = collections.namedtuple('AsyncRecord',  ['What', 'async_class', 'name', 'results'])
+StreamRecord = collections.namedtuple('StreamRecord', ['What', 'stream_class', 'output'])
 
-
-def generate_tokens(text):
-    #  scanner = master_pat.scanner(text)
-    for m in master_pat.finditer(text):
-        tok = Token(m.lastgroup, m.group(m.lastgroup))
-        yield tok
-
-GDB_PROMPT = object()
 
 class ParseError(Exception):
     pass
@@ -58,6 +50,7 @@ class ParseError(Exception):
 class GDBOutputParse:
 
     def __init__(self):
+        self.GDB_PROMPT = object()
         self.record_parse_func = {'RESULT_CLASS' : self.result_record,
                                 'EXEC_CLASS' : self.async_record,
                                 'STATUS_CLASS' : self.async_record,
@@ -67,16 +60,24 @@ class GDBOutputParse:
                                 'LOG_OUTPUT' : self.stream_record
                                 }
 
+    @staticmethod
+    def generate_tokens(text):
+        #  scanner = master_pat.scanner(text)
+        for m in master_pat.finditer(text):
+            tok = Token(m.lastgroup, m.group(m.lastgroup))
+            yield tok
+
     def parse(self, text):
-        self.tokens = generate_tokens(text)
+        self.tokens = self.generate_tokens(text)
         self.tok = None # Last symbol consumed
         self.nexttok = None  # Next symbol tokenized
         self._advance()
+
         return self.output_parse()
 
     def output_parse(self):
         if self._accept('GDB'):
-            return GDB_PROMPT
+            return self.GDB_PROMPT
 
         n = self.token_num()
         return n, self.record_parse()
@@ -93,6 +94,8 @@ class GDBOutputParse:
                 return f()
 
     def results(self):
+        """
+        """
         value_pat = re.compile('|'.join([r'\{(?P<T>(.*?))\}',
                                          r'\[(?P<L>(.*?))\]',
                                          r'(?P<V>[\w-]+)=',
@@ -153,18 +156,18 @@ class GDBOutputParse:
     def result_record(self):
         result_class = self.tok.value
         results = self.results()
-        return ResultRecord(result_class, results)
+        return ResultRecord('ResultRecord', result_class, results)
 
     def async_record(self):
         async_class = self.tok.type
         async_name = self.tok.value
         results = self.results()
-        return AsyncRecord(async_class, async_name, results)
+        return AsyncRecord('AsyncRecord', async_class, async_name, results)
 
     def stream_record(self):
         stream_class = self.tok.type
         output = self.tok.value
-        return StreamRecord(stream_class, output)
+        return StreamRecord('StreamRecord', stream_class, output)
 
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)

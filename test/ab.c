@@ -2,8 +2,15 @@
 
 long seqsum(long n) {
     long ret = 0;
-    if (n > 0) {
-        ret = n + seqsum(n-1);
+    int i;
+    for(i=0; i<n; i++)
+    {
+        ret = 0;
+        int j = 0;
+        for(j=0; j<n; j++)
+        {
+            ret += 1;
+        }
     }
     return ret;
 }

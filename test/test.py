@@ -16,10 +16,9 @@ def main():
 
     logger = logging.getLogger(__name__)
 
-    session = Session("./ab")
+    session = Session("./ab", output="/dev/pts/7")
 
-    sleep(1)
-    session.do_breakswitch(filename='ab.c', line=14)
+    session.do_breakswitch(filename='ab.c', line=18)
 
 if __name__ == '__main__':
     main()

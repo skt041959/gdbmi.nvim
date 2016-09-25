@@ -25,7 +25,7 @@ function! gdbmi#util#define_commands() abort "{{{
     "vnoremap <silent> <Plug>LLStdInSelected
     "        \ :<C-U>call <SID>llnotify("stdin", lldb#util#get_selection())<CR>
     command! GDBBreakSwitch 
-                \ call <SID>gdbnotify("breakswitch", bufnr("%"), getcurpos()[1])
+                \ call <SID>gdbnotify("breakswitch", expand("%:p"), getcurpos()[1])
 endfunction
 "}}}
 
