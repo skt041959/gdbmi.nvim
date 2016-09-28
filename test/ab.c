@@ -22,6 +22,7 @@ int main () {
 
     printf("Enter a number:\n");
     scanf("%ld", &a);
+    a = 1000000;
 
     b = seqsum(a);
     printf("%ld\n", b);

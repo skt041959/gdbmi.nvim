@@ -26,10 +26,10 @@ class GDBMI_plugin():
 
         term_pid = vim.vars['gdbmi#_terminal_job_pid']
         term_tty = os.readlink("/proc/{}/fd/0".format(term_pid))
-        output = open(term_tty, 'w')
+        #  output = open(term_tty, 'w')
         #  output.write('hello world\n')
         #  output.flush()
-        return output
+        return term_tty
 
     @staticmethod
     def update_term_width(fd=1):  # defaults to the main terminal
@@ -52,13 +52,17 @@ class GDBMI_plugin():
     @neovim.rpc_export('launchgdb', sync=False)
     def launchgdb(self, args):
         debugee = args[0]
-        output = self.openTerminalWindow()
-        self.session = Session(debugee, output)
+        gdb_tty = self.openTerminalWindow()
+        self.session = Session(debugee, gdb_tty)
 
     @neovim.rpc_export('breakswitch', sync=False)
     def breakswitch(self, args):
         filename, line = args
         self.session.do_breakswitch(filename = filename, line = line)
+
+    @neovim.rpc_export('exec', sync=False)
+    def exec(self, args):
+        self.session.exec(args[0], args[1:])
 
 
 def main(vim):

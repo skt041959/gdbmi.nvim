@@ -20,5 +20,13 @@ def main():
 
     session.do_breakswitch(filename='ab.c', line=18)
 
+    session.exec('run', [])
+    session.exec('next', [])
+
+    for line in sys.stdin:
+        session.send_console_cmd(line.strip())
+
+    session.quit()
+
 if __name__ == '__main__':
     main()
