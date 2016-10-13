@@ -7,9 +7,6 @@ import fcntl
 import select
 import logging
 import functools
-import re
-import termios
-import struct
 
 from collections import deque
 from subprocess import Popen, PIPE
@@ -22,8 +19,7 @@ from .parse import ResultRecord, AsyncRecord, StreamRecord
 class Handled(object): pass
 
 
-class ErrorArgumentsException(Exception):
-    pass
+class ErrorArgumentsException(Exception): pass
 
 
 def exception(logger):
@@ -50,11 +46,9 @@ def exception(logger):
         return wrapper
     return decorator
 
-def ansi(string, style):
-    return '\x1b[{}m{}\x1b[0m'.format(style, string)
 
 class Session(object):
-    def __init__(self, debuggee, output, gdb="gdb"):
+    def __init__(self, debuggee, gdb="gdb"):
         """
         >>> p = Session("test/hello")
         """
@@ -74,7 +68,6 @@ class Session(object):
         self.exec_state = 'ready'
 
         self.debuggee = debuggee
-        self.output = open(output, 'w')
 
         self.process = self._launch_gdb(debuggee, gdb)
 
@@ -170,20 +163,6 @@ class Session(object):
                    }.get(obj.What, _ignore)
 
         return handler(token, obj)
-
-    def _display(self):
-        raw = fcntl.ioctl(self.output.fileno(), termios.TIOCGWINSZ, ' ' * 4)
-        height, width = struct.unpack('hh', raw)
-
-        self.output.write('\x1b[H\x1b[J') #  clear screen
-
-        lines = []
-        for m in [self._panel_locals, self._panel_console_output]:
-            lines.extend(m())
-
-        for l in lines:
-            self.output.write(l)
-        self.output.flush()
 
     def _handle_result(self, token, obj):
         #  self.logger.debug(repr(obj))
@@ -322,7 +301,7 @@ class Session(object):
     def _filter(self, container, what, **kwargs):
 
         def f(token, obj):
-            self.logger.debug(repr(obj))
+            #  self.logger.debug(repr(obj))
             if obj.What == what:
                 for k,v in kwargs.items():
                     if getattr(obj, k, None) != v:
@@ -359,15 +338,24 @@ class Session(object):
 
             if self.exec_state == 'stopped':
                 self._display()
+                r = results[-1]
+                frame = r.results['frame']
+
+                return frame['fullname'], frame['line']
+
+        if cmd == 'interrupt':
+            self.inferior_interrupt()
 
     def inferior_interrupt(self):
         self.process.send_signal(15)
         self.reader.parent = greenlet.getcurrent()
         self.reader.switch(token)
 
-    def _panel_locals(self):
+    def get_console_output(self):
+        return self.console_output
+
+    def get_locals(self):
         results = []
-        lines = []
 
         if self.exec_state == 'stopped':
             token = self._send("-stack-list-variables --simple-values",
@@ -376,22 +364,24 @@ class Session(object):
             self.reader.switch(token)
 
             variables = results[0].results['variables']
+            return variables
+        else:
+            return []
 
-            longestname = max((len(v['name']) for v in variables))
-            longesttype = max((len(v['type']) for v in variables))
+    def get_frames(self):
+        results = []
 
-            lines = [ansi("{name:<{longestname}} {type:<{longesttype}} {value}\n".
-                     format(longestname=longestname,
-                            longesttype=longesttype,
-                            **v), '1;32')
-                     for v in variables]
-        return lines
+        if self.exec_state == 'stopped':
+            token = self._send("-stack-list-frames",
+                               self._filter(results, 'ResultRecord', result_class='done'))
+            self.reader.parent = greenlet.getcurrent()
+            self.reader.switch(token)
 
-    def _panel_console_output(self):
+            frames = results[0].results['stack']
 
-        lines = self.console_output
-
-        return lines
+            return frames
+        else:
+            return []
 
     def send_console_cmd(self, cmd):
         if cmd == 'n':
@@ -405,6 +395,11 @@ class Session(object):
             return
 
         token = self._send("-interpreter-exec console " + cmd, self._handle)
+        self.reader.parent = greenlet.getcurrent()
+        self.reader.switch(token)
+
+    def send_cmd(self, cmd):
+        token = self._send(cmd, self._handle)
         self.reader.parent = greenlet.getcurrent()
         self.reader.switch(token)
 

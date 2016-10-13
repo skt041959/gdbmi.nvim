@@ -16,7 +16,7 @@ def main():
 
     logger = logging.getLogger(__name__)
 
-    session = Session("./ab", output="/dev/pts/7")
+    session = Session("./ab", output="/dev/pts/18")
 
     session.do_breakswitch(filename='ab.c', line=18)
 
@@ -24,7 +24,11 @@ def main():
     session.exec('next', [])
 
     for line in sys.stdin:
-        session.send_console_cmd(line.strip())
+        if line.startswith('-'):
+            session.send_cmd(line.strip())
+        else:
+            session.send_console_cmd(line.strip())
+
 
     session.quit()
 

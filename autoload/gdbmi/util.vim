@@ -2,11 +2,20 @@ function gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
-function s:gdbcomplete(arg, line, pos)
+function! gdbmi#util#goto_last_frame(filename, line) abort
+    let l:bufnr = bufnr(a:filename)
+    try
+        buffer +a:line l:bufnr
+    catch
+        call gdbmi#util#print_error(l:bufnr)
+    endtry
+endfunction
+
+function s:gdbcomplete(arg, line, pos) abort
     return []
 endfunction
 
-function s:gdb_exec_complete(arg, ...)
+function s:gdb_exec_complete(arg, ...) abort
     return ['run', 'next', 'step', 'continue', 'finish',
                 \'next-instruction', 'step-instruction']
 endfunction
@@ -19,20 +28,21 @@ function! s:gdbnotify(event, ...) abort
     call rpcnotify(g:gdbmi#_channel_id, a:event, a:000)
 endfun
 
+
 function! gdbmi#util#define_commands() abort "{{{
     command!      -nargs=*    -complete=customlist,<SID>gdbcomplete
                 \ GDBLaunch          call <SID>gdbnotify("launchgdb", <f-args>)
     "command!      -nargs=?    -complete=customlist,<SID>stdincompl
     "        \ LLstdin     call lldb#remote#stdin_prompt(<f-args>)
 
-    "nnoremap <Plug>GDBBreakSwitch
-    "            \ :call <SID>gdbnotify("breakswitch", bufnr("%"), getcurpos()[1])<CR>
+    nnoremap <silent> <Plug>GDBBreakSwitch
+               \ :call <SID>gdbnotify("breakswitch", expand("%:p"), getcurpos()[1])<CR>
     "vnoremap <silent> <Plug>LLStdInSelected
     "        \ :<C-U>call <SID>llnotify("stdin", lldb#util#get_selection())<CR>
-    command! GDBBreakSwitch 
-                \ call <SID>gdbnotify("breakswitch", expand("%:p"), getcurpos()[1])
+    " command! GDBBreakSwitch 
+    "             \ call <SID>gdbnotify("breakswitch", expand("%:p"), getcurpos()[1])
 
-    command!      -nargs=*    -complete=customlist,<SID>gdb_exec_complete
+    command!      -nargs=+    -complete=customlist,<SID>gdb_exec_complete
                 \ GDBExec          call <SID>gdbnotify("exec", <f-args>)
 endfunction
 "}}}
