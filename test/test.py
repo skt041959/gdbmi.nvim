@@ -3,9 +3,11 @@ import logging
 from time import sleep
 sys.path.insert(0, '../rplugin/python3/gdbmi_interface')
 
+import neovim
+
 from gdbmi.session import Session
 
-def main():
+def main(vim):
     logging.basicConfig(
         #level=logging.INFO,
         level=logging.DEBUG,
@@ -16,12 +18,12 @@ def main():
 
     logger = logging.getLogger(__name__)
 
-    session = Session("./ab", output="/dev/pts/18")
+    session = Session(vim, "./ab")
 
     session.do_breakswitch(filename='ab.c', line=18)
 
-    session.exec('run', [])
-    session.exec('next', [])
+    session.do_exec('run', [])
+    session.do_exec('next', [])
 
     for line in sys.stdin:
         if line.startswith('-'):
@@ -33,4 +35,6 @@ def main():
     session.quit()
 
 if __name__ == '__main__':
-    main()
+
+    vim = neovim.attach('child', argv=["/bin/env", "nvim", "--embed", "-u", "init.vim"])
+    main(vim)

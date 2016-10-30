@@ -4,14 +4,14 @@ import os
 import pty
 import sys
 import fcntl
-import select
+import selectors
 import logging
 import functools
+from threading import Thread, Event
+from collections import deque
 
 from collections import deque
 from subprocess import Popen, PIPE
-
-from greenlet import greenlet
 
 from .parse import GDBOutputParse, ParseError
 from .parse import ResultRecord, AsyncRecord, StreamRecord
@@ -48,11 +48,18 @@ def exception(logger):
 
 
 class Session(object):
-    def __init__(self, debuggee, gdb="gdb"):
+    def __init__(self, vim, debuggee, gdb="gdb"):
         """
         >>> p = Session("test/hello")
         """
+        self.vim = vim
+
         self.logger = logging.getLogger(__name__)
+        fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
+        fh.setFormatter(logging.Formatter(
+            '%(asctime)s [%(levelname)s @ '
+            '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
+        self.logger.addHandler(fh)
         self.logger.setLevel(logging.DEBUG)
 
         self.buf = ""
@@ -65,29 +72,37 @@ class Session(object):
         self._callbacks = {}
         self._hijacked = {}
 
-        self.exec_state = 'ready'
-
         self.debuggee = debuggee
 
         self.process = self._launch_gdb(debuggee, gdb)
+        self.exec_state = 'ready'
+        self.sendable = False
 
-        self.token = 0
-
-        self.sender = greenlet(self._send)
-        self.reader = greenlet(self._read)
-
-        self.waiting_cmd = deque()
-
+        self.parser = GDBOutputParse()
         self.console_output = []
-        if self.reader.switch(self._handle, 0):
-            self.sendable = True
+        self.token = 0
+        self.last_valid_token = None
+        self.gdb_stdout_buf = []
+        self.gdb_stdout_objs = deque()
+
+        self.sel = selectors.DefaultSelector()
+        self.sel.register(self.process.stdout, selectors.EVENT_READ, self._gdb_stdout_handler)
+        self.sendable = False
+        while True:
+            events = self.sel.select(3)
+            for key, mask in events:
+                key.data(key.fileobj, mask)
+            if not events:
+                break
+
+        self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
+        self.reader.start()
 
         self.logger.debug("session: {} gdb: {}".format(debuggee, gdb))
 
-        master_fd = self.inferior_tty_set()
-        self.debuggee_file = open(master_fd, 'w')
-
-        self._display()
+        #  master_fd = self.inferior_tty_set()
+        #  self.debuggee_file = open(master_fd, 'w')
+        #  self.sel.register(self.debuggee_file, selectors.EVENT_READ, self._debugee_stdout_handler)
 
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,
@@ -108,7 +123,7 @@ class Session(object):
 
         return p
 
-    def _send(self, cmd, handler):
+    def _send(self, cmd, handler=None, async=True):
         if self.sendable:
             self.token += 1
             token = "%04d" % self.token
@@ -116,53 +131,61 @@ class Session(object):
             self.process.stdin.write(buf.encode('utf8'))
 
             self.logger.debug("SENT[{0}]: {1}".format(token, cmd))
-            self.commands[token] = {'cmd': cmd, 'handler': handler}
+            self.commands[token] = {'cmd': cmd, 'handler': handler, 'handled': False}
+            if not async:
+                self.commands[token]['waiting'] = Event()
             return token
         else:
             return None
 
-    def _read(self, handler, blocking = 0):
-        p = self.process
-        parser = GDBOutputParse()
-        while 1:
-            rd = select.select([p.stdout], [], [], blocking)[0]
-            if p.stdout in rd:
-                buf = p.stdout.readline().decode('utf8')
-                self.logger.debug('RAW: ' + buf)
-                try:
-                    token, result = parser.parse(buf)
-                except ParseError as e:
-                    #  self.vim.err_write("[gdbmi]: gdb output parse error\n")
-                    raise e
-                else:
-                    if result is parser.GDB_PROMPT:
-                        token = greenlet.getcurrent().parent.switch(True)
-                        if token:
-                            handler = self.commands[token]['handler']
-                        else:
-                            handler = self._handle
-                        self.logger.debug("switch in {}".format(greenlet.getcurrent()))
-                        continue
+    def _read(self, selector):
+        while True:
+            events = selector.select()
+            for key, mask in events:
+                key.data(key.fileobj, mask)
 
-                    #  import ipdb
-                    #  ipdb.set_trace()
-                    if handler(token, result):
-                        pass
-                    else:
-                        self.logger.error('=======' + repr(result))
-                    blocking = 0
+    def _gdb_stdout_handler(self, fileobj, mask):
+        line = fileobj.readline().decode('utf8')
+        self.logger.debug('RAW: ' + line)
+        #  self.vim.async_call(self._handle, line)
+        self._handle(line)
 
-    def _handle(self, token, obj):
+    def _debugee_stdout_handler(self, fileobj, mask):
+        pass
+
+    def _handle(self, line):
         def _ignore(token, obj):
             self.logger.warn(["IGN:", token, obj])
             return False
 
-        handler = {'ResultRecord'   : self._handle_result,
-                   'AsyncRecord'    : self._handle_async,
-                   'StreamRecord'   : self._handle_stream,
-                   }.get(obj.What, _ignore)
-
-        return handler(token, obj)
+        self.gdb_stdout_buf.append(line)
+        try:
+            token, obj = self.parser.parse(line)
+        except ParseError as e:
+            raise e
+        else:
+            if obj is self.parser.GDB_PROMPT:
+                token = self.last_valid_token
+                command = self.commands.get(token, {'handler': None, 'waiting': None})
+                inferior_handler = command['handler']
+                event = command['waiting']
+                while self.gdb_stdout_objs:
+                    obj = self.gdb_stdout_objs.popleft()
+                    handler = {'ResultRecord'   : self._handle_result,
+                               'AsyncRecord'    : self._handle_async,
+                               'StreamRecord'   : self._handle_stream,
+                               }.get(obj.What, _ignore)
+                    handler(token, obj)
+                    if inferior_handler is not None:
+                        inferior_handler(token, obj)
+                self.sendable = True
+                if event is not None:
+                    event.set()
+            else:
+                self.sendable = False
+                if token:
+                    self.last_valid_token = token
+                self.gdb_stdout_objs.append(obj)
 
     def _handle_result(self, token, obj):
         #  self.logger.debug(repr(obj))
@@ -182,8 +205,7 @@ class Session(object):
         #  self.logger.debug(repr(obj))
         if obj.async_class == "NOTIFY_CLASS":
             if obj.name == "thread-group-added":
-                tg = self._add_thread_group(obj.results)
-                self.logger.info(tg)
+                self._add_thread_group(obj.results)
                 return True
 
             if obj.name == "thread-group-started":
@@ -264,19 +286,15 @@ class Session(object):
         self.logger.info(['updated BREAKPOINT', self.breakpoints[number]])
         self._callback('bkpt')
 
-    def wait_for(self, stop_token = None):
-        for token, obj in self.read(1):
-            if token == stop_token:
-                return True
-        return False
+    def wait_for(self, token):
+        return self.commands[token]['waiting'].wait()
 
     def inferior_tty_set(self):
         pid = os.getpid()
         (master, slave) = os.openpty()
         slave_node = "/proc/{0}/fd/{1}".format(pid, slave)
-        token = self._send("-inferior-tty-set " + slave_node, self._handle)
-        self.reader.switch(token)
-        self.logger.debug("switch in {}".format(greenlet.getcurrent()))
+        token = self._send("-inferior-tty-set " + slave_node, async=False)
+        self.wait_for(token)
 
         return "/proc/{0}/fd/{1}".format(pid, master)
 
@@ -290,11 +308,8 @@ class Session(object):
 
         self.logger.debug("breakswitch at {}".format(l))
 
-        token = self._send("-break-insert " + l, self._handle)
-
-        self.reader.parent = greenlet.getcurrent()
-        self.reader.switch(token)
-        self.logger.debug("switch in {}".format(greenlet.getcurrent()))
+        token = self._send("-break-insert " + l, async=False)
+        self.wait_for(token)
 
         return token
 
@@ -308,12 +323,10 @@ class Session(object):
                         break
                 else:
                     container.append(obj)
-                    return True
-            return self._handle(token, obj)
 
         return f
 
-    def exec(self, cmd, args=None):
+    def do_exec(self, cmd, args=None):
         results = []
 
         if cmd in ('run', 'next', 'step', 'continue', 'finish',
@@ -321,35 +334,11 @@ class Session(object):
             token = self._send("-exec-" + cmd + " " + " ".join(args),
                                self._filter(results, 'AsyncRecord', async_class='EXEC_CLASS'))
 
-            if token is None:
-                return
-
-            self.reader.parent = greenlet.getcurrent()
-            self.reader.switch(token)
-            self.logger.debug("switch in {}".format(greenlet.getcurrent()))
-            if all((self._handle_async(token, r) for r in results)):
-                pass
-
-            if self.exec_state == 'running':
-                self.reader.switch(token)
-                self.logger.debug("switch in {}".format(greenlet.getcurrent()))
-                if not all((self._handle_async(token, r) for r in results)):
-                    return
-
-            if self.exec_state == 'stopped':
-                self._display()
-                r = results[-1]
-                frame = r.results['frame']
-
-                return frame['fullname'], frame['line']
-
         if cmd == 'interrupt':
             self.inferior_interrupt()
 
     def inferior_interrupt(self):
         self.process.send_signal(15)
-        self.reader.parent = greenlet.getcurrent()
-        self.reader.switch(token)
 
     def get_console_output(self):
         return self.console_output
@@ -359,10 +348,9 @@ class Session(object):
 
         if self.exec_state == 'stopped':
             token = self._send("-stack-list-variables --simple-values",
-                               self._filter(results, 'ResultRecord', result_class='done'))
-            self.reader.parent = greenlet.getcurrent()
-            self.reader.switch(token)
+                               self._filter(results, 'ResultRecord', result_class='done'), async=False)
 
+            self.wait_for(token)
             variables = results[0].results['variables']
             return variables
         else:
@@ -373,12 +361,9 @@ class Session(object):
 
         if self.exec_state == 'stopped':
             token = self._send("-stack-list-frames",
-                               self._filter(results, 'ResultRecord', result_class='done'))
-            self.reader.parent = greenlet.getcurrent()
-            self.reader.switch(token)
-
+                               self._filter(results, 'ResultRecord', result_class='done'), async=False)
+            self.wait_for(token)
             frames = results[0].results['stack']
-
             return frames
         else:
             return []
@@ -395,13 +380,10 @@ class Session(object):
             return
 
         token = self._send("-interpreter-exec console " + cmd, self._handle)
-        self.reader.parent = greenlet.getcurrent()
-        self.reader.switch(token)
+        #  self.wait_for(token)
 
     def send_cmd(self, cmd):
         token = self._send(cmd, self._handle)
-        self.reader.parent = greenlet.getcurrent()
-        self.reader.switch(token)
 
     def quit(self):
         self._send("-gdb-exit", self._handle)
