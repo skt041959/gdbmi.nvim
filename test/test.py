@@ -7,6 +7,9 @@ import neovim
 
 from gdbmi.session import Session
 
+def callback(*args):
+    print("callback", args)
+
 def main(vim):
     logging.basicConfig(
         #level=logging.INFO,
@@ -22,8 +25,8 @@ def main(vim):
 
     session.do_breakswitch(filename='ab.c', line=18)
 
-    session.do_exec('run', [])
-    session.do_exec('next', [])
+    session.do_exec('run', callback=callback)
+    session.do_exec('next')
 
     for line in sys.stdin:
         if line.startswith('-'):

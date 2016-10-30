@@ -14,9 +14,9 @@ def ansi(string, style):
     return '\x1b[{}m{}\x1b[0m'.format(style, string)
 
 def label(label_name, width):
-    return ''.join([huestr('-'*5).bright_white,
-                    huestr(label_name).bright_green,
-                    huestr('-'*(width-5-len(label_name))).bright_white])
+    return ''.join([huestr('-'*5).bright_white.colorized,
+                    huestr(label_name).bright_green.colorized,
+                    huestr('-'*(width-5-len(label_name))).bright_white.colorized])
 
 @neovim.plugin
 class GDBMI_plugin():
@@ -56,21 +56,26 @@ class GDBMI_plugin():
     def launchgdb(self, args):
         debugee = args[0]
         term_tty = self.openTerminalWindow()
-        self.ouput = open(term_tty, 'w')
+        self.output = open(term_tty, 'w')
         self.session = Session(self.vim, debugee)
 
     @neovim.rpc_export('breakswitch', sync=False)
     def breakswitch(self, args):
         filename, line = args
         self.session.do_breakswitch(filename = filename, line = line)
+        self.vim.out_write("breakpoint at {}:{}\n".format(filename, line))
 
     @neovim.rpc_export('exec', sync=False)
     def exec(self, args):
-        filename, line = self.session.exec(args[0], args[1:])
+        def callback(filename, line):
+            self.logger.debug("exec callback")
+            self.vim.command('buffer +{} {}'.format(line, filename))
+            self._display()
 
-        self.vim.command('buffer +{} {}'.format(line, filename))
+        self.session.do_exec(args[0], *args[1:], callback=callback)
 
     def _display(self):
+        self.logger.debug("update display")
         raw = fcntl.ioctl(self.output.fileno(), termios.TIOCGWINSZ, ' ' * 4)
         height, width = struct.unpack('hh', raw)
 
@@ -82,10 +87,11 @@ class GDBMI_plugin():
 
         for l in lines:
             self.output.write(l)
+
         self.output.flush()
 
     def _panel_locals(self, width):
-        lines = [label('variables')]
+        lines = [label('variables', width)]
 
         variables = self.session.get_locals()
         longestname = max((len(v['name']) for v in variables))
@@ -95,35 +101,36 @@ class GDBMI_plugin():
             lines.append("{name:<{longestname}}-{type:<{longesttype}}: {value}\n".
                          format(longestname=longestname,
                                 longesttype=longesttype,
-                                name=huestr(v.name).white,
-                                type=huestr(v.type).green,)
+                                name=huestr(v['name']).green.colorized,
+                                type=huestr(v['type']).green.colorized,
+                                value=huestr(v['value']).green.colorized,)
                          )
         return lines
 
     def _panel_frames(self, width):
-        lines = [label("frames")]
+        lines = [label("frames", width)]
         frames = self.session.get_frames()
 
         for f in frames:
-            lines.append(ansi("[{level} from {addr} in {func} at {file}:{line}\n".
-                              format(**v),
-                              '1;32'))
             lines.append("[{level} from {addr} in {func} at {file}:{line}\n".
-                         format(level=huestr(f.level),
-                                addr=huestr(f.addr),
-                                file=f.file,
-                                line=f.line,)
+                         format(level=huestr(f['level']),
+                                addr=huestr(f['addr']),
+                                func=huestr(f['func']),
+                                file=f['file'],
+                                line=f['line'],)
                          )
 
         return lines
 
     def _panel_console_output(self, width):
-        lines = [label("console_output")]
+        lines = [label("console_output", width)]
 
         console_output = self.session.get_console_output()
 
         for o in console_output:
             lines.append(huestr(o).white)
+
+        return lines
 
 def main(vim):
     plugin_instance = GDBMI_plugin(vim)

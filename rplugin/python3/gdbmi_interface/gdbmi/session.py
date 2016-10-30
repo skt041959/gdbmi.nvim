@@ -16,10 +16,11 @@ from subprocess import Popen, PIPE
 from .parse import GDBOutputParse, ParseError
 from .parse import ResultRecord, AsyncRecord, StreamRecord
 
-class Handled(object): pass
-
 
 class ErrorArgumentsException(Exception): pass
+
+
+class GDBStopped(Exception): pass
 
 
 def exception(logger):
@@ -53,6 +54,7 @@ class Session(object):
         >>> p = Session("test/hello")
         """
         self.vim = vim
+        self.async_call = vim.async_call
 
         self.logger = logging.getLogger(__name__)
         fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
@@ -123,7 +125,7 @@ class Session(object):
 
         return p
 
-    def _send(self, cmd, handler=None, async=True):
+    def _send(self, cmd, handler=None, async=True, **kwargs):
         if self.sendable:
             self.token += 1
             token = "%04d" % self.token
@@ -131,7 +133,8 @@ class Session(object):
             self.process.stdin.write(buf.encode('utf8'))
 
             self.logger.debug("SENT[{0}]: {1}".format(token, cmd))
-            self.commands[token] = {'cmd': cmd, 'handler': handler, 'handled': False}
+            self.commands[token] = {'cmd': cmd, 'handler': handler}
+            self.commands[token].update(kwargs)
             if not async:
                 self.commands[token]['waiting'] = Event()
             return token
@@ -142,12 +145,16 @@ class Session(object):
         while True:
             events = selector.select()
             for key, mask in events:
-                key.data(key.fileobj, mask)
+                try:
+                    key.data(key.fileobj, mask)
+                except GDBStopped:
+                    break
 
     def _gdb_stdout_handler(self, fileobj, mask):
         line = fileobj.readline().decode('utf8')
+        if line == '':
+            raise GDBStopped
         self.logger.debug('RAW: ' + line)
-        #  self.vim.async_call(self._handle, line)
         self._handle(line)
 
     def _debugee_stdout_handler(self, fileobj, mask):
@@ -166,11 +173,13 @@ class Session(object):
         else:
             if obj is self.parser.GDB_PROMPT:
                 token = self.last_valid_token
+                self.logger.debug("handle token: {}, {} objs".format(token, len(self.gdb_stdout_objs)))
                 command = self.commands.get(token, {'handler': None, 'waiting': None})
-                inferior_handler = command['handler']
-                event = command['waiting']
+                inferior_handler = command.get('handler', None)
+                event = command.get('waiting', None)
                 while self.gdb_stdout_objs:
                     obj = self.gdb_stdout_objs.popleft()
+                    self.logger.debug("obj {}".format(obj.What))
                     handler = {'ResultRecord'   : self._handle_result,
                                'AsyncRecord'    : self._handle_async,
                                'StreamRecord'   : self._handle_stream,
@@ -188,7 +197,7 @@ class Session(object):
                 self.gdb_stdout_objs.append(obj)
 
     def _handle_result(self, token, obj):
-        #  self.logger.debug(repr(obj))
+        self.logger.debug(repr(obj))
         handled = False
         if obj.result_class == "done" or obj.result_class == "running":
             self.commands[token]['state'] = obj.What
@@ -202,7 +211,7 @@ class Session(object):
         return handled
 
     def _handle_async(self, token, obj, **kwargs):
-        #  self.logger.debug(repr(obj))
+        self.logger.debug(repr(obj))
         if obj.async_class == "NOTIFY_CLASS":
             if obj.name == "thread-group-added":
                 self._add_thread_group(obj.results)
@@ -237,6 +246,12 @@ class Session(object):
 
             elif obj.name == 'stopped':
                 self.exec_state = 'stopped'
+                if token:
+                    command = self.commands.get(token, {'exec_callback': None})
+                    callback = command.get('exec_callback', None)
+                    if callback:
+                        self.logger.debug("async calling exec callback")
+                        self.async_call(callback, obj.results['frame']['fullname'], obj.results['frame']['line'])
                 return True
 
         return False
@@ -287,6 +302,7 @@ class Session(object):
         self._callback('bkpt')
 
     def wait_for(self, token):
+        self.logger.debug("waiting for {}".format(token))
         return self.commands[token]['waiting'].wait()
 
     def inferior_tty_set(self):
@@ -326,13 +342,10 @@ class Session(object):
 
         return f
 
-    def do_exec(self, cmd, args=None):
-        results = []
-
+    def do_exec(self, cmd, *args, callback=None):
         if cmd in ('run', 'next', 'step', 'continue', 'finish',
                        'next-instruction', 'step-instruction'):
-            token = self._send("-exec-" + cmd + " " + " ".join(args),
-                               self._filter(results, 'AsyncRecord', async_class='EXEC_CLASS'))
+            token = self._send("-exec-" + cmd + " " + " ".join(args), exec_callback=callback)
 
         if cmd == 'interrupt':
             self.inferior_interrupt()
@@ -342,6 +355,9 @@ class Session(object):
 
     def get_console_output(self):
         return self.console_output
+
+    def get_breakpoints(self):
+        return self.breakpoints
 
     def get_locals(self):
         results = []
