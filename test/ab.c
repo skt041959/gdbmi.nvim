@@ -21,10 +21,11 @@ int main () {
     printf("Hello world\n");
 
     printf("Enter a number:\n");
-    scanf("%ld", &a);
+    // scanf("%ld", &a);
     a = 1000000;
 
     b = seqsum(a);
+
     printf("%ld\n", b);
 
     return 0;

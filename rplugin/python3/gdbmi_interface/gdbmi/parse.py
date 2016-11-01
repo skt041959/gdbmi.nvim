@@ -16,7 +16,7 @@ TARGET_OUTPUT = r'^@\"(?P<TARGET_OUTPUT>(.*?))\"(?=\n)'
 LOG_OUTPUT = r'^&\"(?P<LOG_OUTPUT>(.*?))\"(?=\n)'
 # L_TUPLE = r'(?P<L_TUPLE>\{)'
 # R_TUPLE = r'(?P<R_TUPLE>\})'
-TUPLE = r'\{(?P<TUPLE>(.*?))\}'
+TUPLE = r'\{(?P<TUPLE>(.*))\}'
 # L_LIST = r'(?P<L_LIST>\[)'
 # R_LIST = r'(?P<R_LIST>\])'
 LIST = r'\[(?P<LIST>(.*?))\]'
@@ -120,7 +120,7 @@ class GDBOutputParse:
                     var = m.group(kind)
                     m = next(value_iter, None)
                     if m is None:
-                        raise ParseError
+                        raise ParseError(seq)
                     kind = m.lastgroup
                     if kind == 'T':
                         value = tuple_parse(m.group(kind))
@@ -129,7 +129,7 @@ class GDBOutputParse:
                     elif kind == 'C':
                         value = m.group(kind)
                     else:
-                        raise ParseError
+                        raise ParseError(seq)
                 if kind == 'T':
                     value = tuple_parse(m.group(kind))
                 if kind == 'C':
@@ -141,7 +141,7 @@ class GDBOutputParse:
                 elif m.lastgroup == 'A':
                     continue
                 else:
-                    raise ParseError
+                    raise ParseError(seq)
             return results
 
         def tuple_parse(seq):
@@ -157,7 +157,7 @@ class GDBOutputParse:
                     var = value
                     m = next(value_iter, None)
                     if m is None:
-                        raise ParseError
+                        raise ParseError(seq)
                     kind = m.lastgroup
                     if kind == 'T':
                         value = tuple_parse(m.group(kind))
@@ -166,7 +166,7 @@ class GDBOutputParse:
                     elif kind == 'C':
                         value = m.group(kind)
                     else:
-                        raise ParseError
+                        raise ParseError(seq)
                     results[var] = value
                     m = next(value_iter, None)
                     if m is None:
@@ -174,9 +174,9 @@ class GDBOutputParse:
                     elif m.lastgroup == 'A':
                         continue
                     else:
-                        raise ParseError
+                        raise ParseError(seq)
                 else:
-                    raise ParseError
+                    raise ParseError(seq)
             return results
 
         results = {}
@@ -234,6 +234,12 @@ class GDBOutputParse:
             return False
 
 
+def test():
+    parser = GDBOutputParse()
+    output = '*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"\n'
+    print(parser.parse(output))
+
+
 def main(filename):
     parser = GDBOutputParse()
     with open(filename) as f:
@@ -247,5 +253,6 @@ def main(filename):
 
 if __name__ == "__main__":
     import sys
-    main(sys.argv[1])
+    test()
+    #  main(sys.argv[1])
 

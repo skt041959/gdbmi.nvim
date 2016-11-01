@@ -17,7 +17,7 @@ endfunction
 
 function s:gdb_exec_complete(arg, ...) abort
     return ['run', 'next', 'step', 'continue', 'finish',
-                \'next-instruction', 'step-instruction']
+                \'next-instruction', 'step-instruction', 'interrupt']
 endfunction
 
 function! s:gdbnotify(event, ...) abort
@@ -44,6 +44,8 @@ function! gdbmi#util#define_commands() abort "{{{
 
     command!      -nargs=+    -complete=customlist,<SID>gdb_exec_complete
                 \ GDBExec          call <SID>gdbnotify("exec", <f-args>)
+
+    command!     GDBQuit     call <SID>gdbnotify("quitgdb")
 endfunction
 "}}}
 

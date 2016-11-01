@@ -5,7 +5,7 @@ sys.path.insert(0, '../rplugin/python3/gdbmi_interface')
 
 import neovim
 
-from gdbmi.session import Session
+import gdbmi
 
 def callback(*args):
     print("callback", args)
@@ -21,19 +21,21 @@ def main(vim):
 
     logger = logging.getLogger(__name__)
 
-    session = Session(vim, "./ab")
+    session = gdbmi.Session(vim, "./test_gdbmi")
 
     session.do_breakswitch(filename='ab.c', line=18)
 
     session.do_exec('run', callback=callback)
     session.do_exec('next')
+    session.do_exec('next')
+    session.do_exec('next')
+    session.do_exec('step')
 
     for line in sys.stdin:
         if line.startswith('-'):
             session.send_cmd(line.strip())
         else:
             session.send_console_cmd(line.strip())
-
 
     session.quit()
 
