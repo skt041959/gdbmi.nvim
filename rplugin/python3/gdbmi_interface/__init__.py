@@ -133,7 +133,7 @@ class GDBMI_plugin():
 
         for v in variables:
             line = (huestr(v['name']).green.colorized + " "*(longestname-len(v['name'])+1) +
-                    huestr(v['type']).green.colorized + " "*(longesttype-len(v['type'])) + ":"
+                    huestr(v['type']).green.colorized + " "*(longesttype-len(v['type'])) + ":" +
                     huestr(v['value']).green.colorized + "\n")
             lines.append(line)
 
