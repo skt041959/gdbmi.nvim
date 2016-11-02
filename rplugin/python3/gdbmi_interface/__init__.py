@@ -11,13 +11,44 @@ from .gdbmi import Session
 from .hues import huestr
 from .vim_signs import BPSign, PCSign
 
+
 def ansi(string, style):
     return '\x1b[{}m{}\x1b[0m'.format(style, string)
 
+
 def label(label_name, width):
     return ''.join([huestr('-'*5).bright_white.colorized,
-                    huestr(label_name).bright_green.colorized,
+                    huestr(label_name).bright_cyan.colorized,
                     huestr('-'*(width-5-len(label_name))).bright_white.colorized])
+
+
+class Colorize():
+    def __init__(self, obj, name, **options):
+        self.obj = obj
+        self.name = name
+        self.colorize = getattr(self, 'colorize_'+self.name)
+        self.option = options
+        self.bright = self.option.get('bright', False)
+
+    def __getitem__(self, key):
+        value = self.obj[key]
+        if isinstance(value, (str, bytes)):
+            return self.colorize(value)
+        else:
+            return Colorize(value, name=self.name, **self.option)
+
+    def colorize_thread(self, value):
+        if self.bright:
+            return huestr(value).bright_green.colorized
+        else:
+            return huestr(value).green.colorized
+
+    def colorize_frame(self, value):
+        if self.bright:
+            return huestr(value).bright_green.colorized
+        else:
+            return huestr(value).green.colorized
+
 
 @neovim.plugin
 class GDBMI_plugin():
@@ -90,7 +121,7 @@ class GDBMI_plugin():
             self._display()
 
         if not self.session.do_exec(args[0], *args[1:], callback=callback):
-            self.vim.err_write("exec fail\n")
+            self.vim.err_write("exec {}\n".format(args))
 
     def _update_pc(self, frames):
         self.logger.debug("update pc sign")
@@ -114,6 +145,7 @@ class GDBMI_plugin():
             panels = ['breakpoints', 'console_output']
         else:
             panels = ['breakpoints', 'console_output', 'locals', 'frames', 'threads']
+
         for m in panels:
             caller = getattr(self, '_panel_'+m)
             lines.extend(caller(width))
@@ -144,25 +176,26 @@ class GDBMI_plugin():
         frames = self.session.get_frames()
 
         for f in frames:
-            lines.append("[{level} from {addr} in {func} at {file}:{line}\n".
-                         format(level=huestr(f['level']),
-                                addr=huestr(f['addr']),
-                                func=huestr(f['func']),
-                                file=f['file'],
-                                line=f['line'],)
-                         )
+            lines.append("[{0[level]}] from {0[addr]} in {0[func]} at {0[file]}:{0[line]}"
+                         "\n"
+                         .format(Colorize(f, name='frame')))
 
         self._update_pc(frames)
 
         return lines
 
-    def _panel_console_output(self, width):
+    def _panel_console_output(self, width, old_console_output=[]):
         lines = [label("console_output", width)]
 
         console_output = self.session.get_console_output()
+        n = len(console_output) - len(old_console_output)
 
-        for o in console_output[-10:]:
-            lines.append(huestr(o).white)
+        for o in console_output[-10:-n]:
+            lines.append(huestr(o).white.colorized)
+
+        for o in console_output[-n:]:
+            lines.append(huestr(o).green.colorized)
+            old_console_output.append(o)
 
         return lines
 
@@ -179,9 +212,15 @@ class GDBMI_plugin():
     def _panel_threads(self, width):
         lines = [label("threads", width)]
 
-        threads = self.session.get_threads()
+        results = self.session.get_threads()
+        threads = results['threads']
         for th in threads:
-            lines.append("")
+            self.logger.debug(repr(th))
+            lines.append("[{0[id]}] {0[target-id]}"
+                         " from {0[frame][addr]} in {0[frame][func]}"
+                         " at {0[frame][fullname]}:{0[frame][line]}"
+                         "\n"
+                         .format(Colorize(th, name='thread', bright=True)))
 
         return lines
 

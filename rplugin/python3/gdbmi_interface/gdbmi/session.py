@@ -46,8 +46,8 @@ def exception(logger):
                 err += func.__name__
                 logger.exception(err)
 
-            # re-raise the exception
-            raise
+                # re-raise the exception
+                raise
         return wrapper
     return decorator
 
@@ -94,12 +94,14 @@ class Session(object):
 
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.process.stdout, selectors.EVENT_READ, self._gdb_stdout_handler)
+        self.commands[None] = {}
         while True:
             events = self.sel.select(3)
             for key, mask in events:
                 key.data(key.fileobj, mask)
             if not events:
                 break
+        self.commands.clear()
 
         self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
         self.reader.start()
@@ -132,12 +134,13 @@ class Session(object):
     def _send(self, cmd, handler=None, **kwargs):
         self.token += 1
         token = "%04d" % self.token
+        self.commands[token] = {'cmd': cmd, 'handler': handler}
+        self.commands[token].update(kwargs)
+
         buf = token + cmd + "\n"
         self.process.stdin.write(buf.encode('utf8'))
 
         self.logger.debug("SENT[{0}]: {1}".format(token, huestr(cmd).green.colorized))
-        self.commands[token] = {'cmd': cmd, 'handler': handler}
-        self.commands[token].update(kwargs)
         return token
 
     def _read(self, selector):
@@ -150,17 +153,13 @@ class Session(object):
                     self.logger.error("GDBStopped")
                     return
 
+    @exception(logging.getLogger(__name__))
     def _gdb_stdout_handler(self, fileobj, mask):
         line = fileobj.readline().decode('utf8')
         if line == '':
             raise GDBStopped
         self.logger.debug('RAW: ' + huestr(line).green.colorized)
-        try:
-            self._handle(line)
-        except:
-            err = "There was an exception in  "
-            err += __name__
-            self.logger.exception(err)
+        self._handle(line)
 
     def _debugee_stdout_handler(self, fileobj, mask):
         pass
@@ -179,7 +178,7 @@ class Session(object):
             if obj is self.parser.GDB_PROMPT:
                 token = self.last_valid_token
                 self.logger.debug("handle token: {}, {} objs".format(token, len(self.gdb_stdout_objs)))
-                command = self.commands.get(token, {'handler': None, 'waiting': None})
+                command = self.commands[token]
                 inferior_handler = command.get('handler', None)
                 event = command.get('waiting', None)
                 while self.gdb_stdout_objs:
@@ -203,7 +202,8 @@ class Session(object):
         self.logger.debug(obj.What)
         handled = False
         if obj.result_class == "done" or obj.result_class == "running":
-            command = self.commands.get(token, None)
+            if token:
+                command = self.commands[token]
 
             if 'bkpt' in obj.results:
                 self._update_breakpoint(obj.results['bkpt'])
@@ -253,7 +253,7 @@ class Session(object):
             elif obj.name == 'stopped':
                 self.exec_state = 'stopped'
                 if token:
-                    command = self.commands.get(token, {'exec_callback': None})
+                    command = self.commands[token]
                     callback = command.get('exec_callback', None)
                     if callback:
                         self.logger.debug("async calling exec callback")
@@ -409,7 +409,7 @@ class Session(object):
                                self._filter(results, 'ResultRecord', result_class='done'),
                                waiting=Event())
             self.wait_for(token)
-            threads = results[0].results['threads']
+            threads = results[0].results
             return threads
         else:
             return []
