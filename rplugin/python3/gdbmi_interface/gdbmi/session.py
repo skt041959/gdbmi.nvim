@@ -398,6 +398,19 @@ class Session(object):
         else:
             return []
 
+    def get_threads(self):
+        results = []
+
+        if self.exec_state == 'stopped':
+            token = self._send("-thread-info",
+                               self._filter(results, 'ResultRecord', result_class='done'),
+                               waiting=Event())
+            self.wait_for(token)
+            frames = results[0].result['threads']
+            return frames
+        else:
+            return []
+
     def send_console_cmd(self, cmd):
         if cmd == 'n':
             self.exec('next', [])

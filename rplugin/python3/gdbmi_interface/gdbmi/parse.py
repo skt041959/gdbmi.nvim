@@ -14,12 +14,12 @@ NOTIFY_CLASS = r'=(?P<NOTIFY_CLASS>[\w-]+)'
 CONSOLE_OUTPUT = r'^~\"(?P<CONSOLE_OUTPUT>(.*?))\"(?=\n)'
 TARGET_OUTPUT = r'^@\"(?P<TARGET_OUTPUT>(.*?))\"(?=\n)'
 LOG_OUTPUT = r'^&\"(?P<LOG_OUTPUT>(.*?))\"(?=\n)'
-# L_TUPLE = r'(?P<L_TUPLE>\{)'
-# R_TUPLE = r'(?P<R_TUPLE>\})'
-TUPLE = r'\{(?P<TUPLE>(.*))\}'
-# L_LIST = r'(?P<L_LIST>\[)'
-# R_LIST = r'(?P<R_LIST>\])'
-LIST = r'\[(?P<LIST>(.*?))\]'
+L_TUPLE = r'(?P<L_TUPLE>\{)'
+R_TUPLE = r'(?P<R_TUPLE>\})'
+#  TUPLE = r'\{(?P<TUPLE>(.*))\}'
+L_LIST = r'(?P<L_LIST>\[)'
+R_LIST = r'(?P<R_LIST>\])'
+#  LIST = r'\[(?P<LIST>(.*?))\]'
 VARIABLE = r'(?P<VARIABLE>[\w-]+)='
 CONST = r'\"(?P<CONST>(.*?))\"'
 GDB = r'(?P<GDB>\(gdb\))'
@@ -31,9 +31,9 @@ ASSIGN = r'(?P<ASSIGN>=)'
 master_pat = re.compile('|'.join([TOKEN_NUM, RESULT_CLASS,
                                   EXEC_CLASS, STATUS_CLASS, NOTIFY_CLASS,
                                   CONSOLE_OUTPUT, TARGET_OUTPUT, LOG_OUTPUT,
-                                  # L_TUPLE, R_TUPLE,
-                                  # L_LIST, R_LIST,
-                                  TUPLE, LIST,
+                                  L_TUPLE, R_TUPLE,
+                                  L_LIST, R_LIST,
+                                  #  TUPLE, LIST,
                                   VARIABLE, CONST,
                                   GDB, COMMA, NL, ASSIGN,
                                   ])
@@ -181,16 +181,65 @@ class GDBOutputParse:
 
         results = {}
         while self._accept("COMMA"):
-            if self._accept("VARIABLE"):
-                var = self.tok.value
-            if self._accept("TUPLE"):
-                value = tuple_parse(self.tok.value)
-            elif self._accept("LIST"):
-                value = list_parse(self.tok.value)
-            elif self._accept("CONST"):
-                value = self.tok.value
+            var, value = self.result()
             results[var] = value
         return results
+
+    def result(self):
+        if self._accept("VARIABLE"):
+            var = self.tok.value
+        else:
+            raise ParseError(self.tok)
+
+        value = self.value()
+
+        return var, value
+
+    def tuple(self):
+        results = {}
+        if not self._accept("R_TUPLE"):
+            var, value = self.result()
+            results[var] = value
+        else:
+            return results
+
+        while not self._accept("R_TUPLE"):
+            if self._accept("COMMA"):
+                var, value = self.result()
+                results[var] = value
+            else:
+                raise ParseError(self.tok)
+
+        return results
+
+    def list(self):
+        values = []
+        if not self._accept("R_LIST"):
+            value = self.value()
+            values.append(value)
+        else:
+            return values
+
+        while not self._accept("R_LIST"):
+            if self._accept("COMMA"):
+                value = self.value()
+                values.append(value)
+            else:
+                raise ParseError(self.tok)
+
+        return values
+
+    def value(self):
+        if self._accept("L_TUPLE"):
+            value = self.tuple()
+        elif self._accept("L_LIST"):
+            value = self.list()
+        elif self._accept("CONST"):
+            value = self.tok.value
+        else:
+            raise ParseError(self.tok)
+
+        return value
 
     def result_record(self):
         result_class = self.tok.value
@@ -225,6 +274,7 @@ class GDBOutputParse:
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
         self.logger.debug(repr(self.tok))
+        print(self.tok)
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:
@@ -238,6 +288,11 @@ def test():
     parser = GDBOutputParse()
     output = '*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"\n'
     print(parser.parse(output))
+
+def test2():
+    parser = GDBOutputParse()
+    output = '0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},state="stopped",core="1"}],current-thread-id="1"\n'
+    print(parser.parse((output)))
 
 
 def main(filename):
@@ -253,6 +308,8 @@ def main(filename):
 
 if __name__ == "__main__":
     import sys
-    test()
+    for tok in GDBOutputParse.generate_tokens(output):
+        print(tok)
+    test2()
     #  main(sys.argv[1])
 

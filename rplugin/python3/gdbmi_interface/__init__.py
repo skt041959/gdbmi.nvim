@@ -178,6 +178,11 @@ class GDBMI_plugin():
 
     def _panel_threads(self, width):
         lines = [label("threads", width)]
+
+        threads = self.session.get_threads()
+        for th in threads:
+            lines.append("")
+
         return lines
 
 
