@@ -100,89 +100,12 @@ class GDBOutputParse:
                 return f()
 
     def results(self):
-        """
-        """
-        value_pat = re.compile('|'.join([r'\{(?P<T>(.*?))\}',
-                                         r'\[(?P<L>(.*?))\]',
-                                         r'(?P<V>[\w-]+)=',
-                                         r'\"(?P<C>(.*?))\"',
-                                         r'(?P<A>\,)',
-                                         ]))
-        def list_parse(seq):
-            value_iter = value_pat.finditer(seq)
-            results = []
-            while 1:
-                m = next(value_iter, None)
-                if m is None:
-                    break
-                kind = m.lastgroup
-                if kind == 'V':
-                    var = m.group(kind)
-                    m = next(value_iter, None)
-                    if m is None:
-                        raise ParseError(seq)
-                    kind = m.lastgroup
-                    if kind == 'T':
-                        value = tuple_parse(m.group(kind))
-                    elif kind == 'L':
-                        value = list_parse(m.group(kind))
-                    elif kind == 'C':
-                        value = m.group(kind)
-                    else:
-                        raise ParseError(seq)
-                if kind == 'T':
-                    value = tuple_parse(m.group(kind))
-                if kind == 'C':
-                    value = m.group(kind)
-                results.append(value)
-                m = next(value_iter, None)
-                if m is None:
-                    break
-                elif m.lastgroup == 'A':
-                    continue
-                else:
-                    raise ParseError(seq)
-            return results
-
-        def tuple_parse(seq):
-            value_iter = value_pat.finditer(seq)
-            results = {}
-            while 1:
-                m = next(value_iter, None)
-                if m is None:
-                    break
-                kind = m.lastgroup
-                value = m.group(kind)
-                if kind == 'V':
-                    var = value
-                    m = next(value_iter, None)
-                    if m is None:
-                        raise ParseError(seq)
-                    kind = m.lastgroup
-                    if kind == 'T':
-                        value = tuple_parse(m.group(kind))
-                    elif kind == 'L':
-                        value = list_parse(m.group(kind))
-                    elif kind == 'C':
-                        value = m.group(kind)
-                    else:
-                        raise ParseError(seq)
-                    results[var] = value
-                    m = next(value_iter, None)
-                    if m is None:
-                        break
-                    elif m.lastgroup == 'A':
-                        continue
-                    else:
-                        raise ParseError(seq)
-                else:
-                    raise ParseError(seq)
-            return results
-
         results = {}
+
         while self._accept("COMMA"):
             var, value = self.result()
             results[var] = value
+
         return results
 
     def result(self):
@@ -197,11 +120,11 @@ class GDBOutputParse:
 
     def tuple(self):
         results = {}
-        if not self._accept("R_TUPLE"):
-            var, value = self.result()
-            results[var] = value
-        else:
+        if self._accept("R_TUPLE"):
             return results
+
+        var, value = self.result()
+        results[var] = value
 
         while not self._accept("R_TUPLE"):
             if self._accept("COMMA"):
@@ -214,18 +137,29 @@ class GDBOutputParse:
 
     def list(self):
         values = []
-        if not self._accept("R_LIST"):
-            value = self.value()
-            values.append(value)
-        else:
+        if self._accept("R_LIST"):
             return values
 
-        while not self._accept("R_LIST"):
-            if self._accept("COMMA"):
-                value = self.value()
-                values.append(value)
-            else:
-                raise ParseError(self.tok)
+        try:
+            value = self.value()
+            values.append(value)
+        except ParseError:
+            var, value = self.result()
+            values.append(value)
+
+            while not self._accept("R_LIST"):
+                if self._accept("COMMA"):
+                    var, value = self.result()
+                    values.append(value)
+                else:
+                    raise ParseError(self.tok)
+        else:
+            while not self._accept("R_LIST"):
+                if self._accept("COMMA"):
+                    value = self.value()
+                    values.append(value)
+                else:
+                    raise ParseError(self.tok)
 
         return values
 
@@ -274,7 +208,6 @@ class GDBOutputParse:
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
         self.logger.debug(repr(self.tok))
-        print(self.tok)
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:

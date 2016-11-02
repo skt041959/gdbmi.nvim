@@ -52,6 +52,8 @@ def exception(logger):
     return decorator
 
 
+
+
 class Session(object):
     def __init__(self, vim, debuggee, gdb="gdb"):
         """
@@ -398,6 +400,7 @@ class Session(object):
         else:
             return []
 
+    @exception(logging.getLogger(__name__))
     def get_threads(self):
         results = []
 
@@ -406,8 +409,8 @@ class Session(object):
                                self._filter(results, 'ResultRecord', result_class='done'),
                                waiting=Event())
             self.wait_for(token)
-            frames = results[0].result['threads']
-            return frames
+            threads = results[0].results['threads']
+            return threads
         else:
             return []
 
