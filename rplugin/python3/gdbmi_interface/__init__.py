@@ -5,6 +5,7 @@ import fcntl
 import termios
 import struct
 import json
+import functools
 
 import neovim
 
@@ -19,7 +20,7 @@ def ansi(string, style):
 
 def label(label_name, width):
     return ''.join([huestr('-'*5).bright_white.colorized,
-                    huestr(label_name).bright_cyan.colorized,
+                    huestr(label_name).bright_yellow.colorized,
                     huestr('-'*(width-5-len(label_name))).bright_white.colorized])
 
 
@@ -53,6 +54,8 @@ class Colorize():
 
 @neovim.plugin
 class GDBMI_plugin():
+    max_debugee_display = 10
+
     def __init__(self, vim):
         self.vim = vim
 
@@ -80,6 +83,23 @@ class GDBMI_plugin():
         term_tty = os.readlink("/proc/{pid}/fd/0".format(pid=term_pid))
         return term_tty
 
+    def wrap_debugee_output(self, output):
+        def update_output_buf(index, lines):
+            self.debugee_output_buf[index] = None
+            self.debugee_output_buf.append(lines)
+
+        try:
+            debugee_output = output.decode('utf8').splitlines()
+            n = len(debugee_output) - len(self.debugee_output)
+        except UnicodeError as e:
+            self.vim.err_write(e)
+            self.vim.err_write("\n")
+        else:
+            self.vim.async_call(update_output_buf,
+                                index = len(self.debugee_output),
+                                lines = debugee_output[-n:])
+            self.debugee_output = debugee_output
+
     @neovim.command('GdbmiInitializePython', sync=True, nargs=0)
     def init_python(self):
         self.vim.vars['gdbmi#_python_pid'] = os.getpid()
@@ -89,8 +109,22 @@ class GDBMI_plugin():
     def launchgdb(self, args):
         debugee = args[0]
         term_tty = self.openTerminalWindow()
+
+        w = self.vim.current.window
+        self.vim.current.window = self.gdb_window
+        self.vim.command(":10new")
+        self.debugee_output_buf = self.vim.current.buffer
+        self.debugee_output_buf.name = '[output]'
+        self.debugee_output_buf.options['swapfile'] = False
+        self.debugee_output_buf.options['buftype'] = "nofile"
+        self.vim.current.window = w
+
         self.output = open(term_tty, 'w')
-        self.session = Session(self.vim, debugee)
+        self.session = Session(debugee)
+
+        self.session.wrap_child_inout(callback=self.wrap_debugee_output)
+        self.debugee_output = ''
+
         self._display()
 
     @neovim.rpc_export('quitgdb', sync=False)
@@ -153,7 +187,8 @@ class GDBMI_plugin():
 
         if args[0] in ('run', 'next', 'step', 'continue', 'finish',
                        'next-instruction', 'step-instruction'):
-            self.session.do_exec(args[0], *args[1:], callback=callback)
+            self.session.do_exec(args[0], *args[1:],
+                                 callback=functools.partial(self.vim.async_call,  fn=callback))
 
         if args[0] is 'interrupt':
             self.session.inferior_interrupt()
@@ -161,7 +196,8 @@ class GDBMI_plugin():
         if args[0] is 'runtocursor':
             filename, line = args
             self.session.do_breakinsert(filename = filename, line = line, temp=True)
-            self.session.do_exec('continue', callback=callback)
+            self.session.do_exec('continue',
+                                 callback=functools.partial(self.vim.async_call,  fn=callback))
 
     def _update_pc(self, frames):
         self.logger.debug("update pc sign")

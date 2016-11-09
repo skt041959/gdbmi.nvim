@@ -53,12 +53,10 @@ def exception(logger):
 
 
 class Session(object):
-    def __init__(self, vim, debuggee, gdb="gdb"):
+    def __init__(self, debuggee, gdb="gdb"):
         """
         >>> p = Session("test/hello")
         """
-        self.vim = vim
-        self.async_call = vim.async_call
 
         self.logger = logging.getLogger(__name__)
         fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
@@ -106,10 +104,6 @@ class Session(object):
 
         self.logger.debug("session: {} gdb: {}".format(debuggee, gdb))
 
-        #  master_fd = self.inferior_tty_set()
-        #  self.debuggee_file = open(master_fd, 'w')
-        #  self.sel.register(self.debuggee_file, selectors.EVENT_READ, self._debugee_stdout_handler)
-
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,
                   args = [gdb,
@@ -154,13 +148,19 @@ class Session(object):
     @exception(logging.getLogger(__name__))
     def _gdb_stdout_handler(self, fileobj, mask):
         line = fileobj.readline().decode('utf8')
-        if line == '':
+        if not line:
             raise GDBStopped
         self.logger.debug('RAW: ' + huestr(line).green.colorized)
         self._handle(line)
 
+    @exception(logging.getLogger(__name__))
     def _debugee_stdout_handler(self, fileobj, mask):
-        pass
+        data = os.read(fileobj, 1024)
+        if not data:
+            raise Exception
+        self.logger.debug('DEBUGEE: ' + huestr(data.decode('utf8', errors="ignore")).red.colorized)
+        self.debugee_output += data
+        self.debuggee_callback(self.debugee_output)
 
     def _handle(self, line):
         def _ignore(token, obj):
@@ -254,8 +254,8 @@ class Session(object):
                     command = self.commands[token]
                     callback = command.get('exec_callback', None)
                     if callback:
-                        self.logger.debug("async calling exec callback")
-                        self.async_call(callback, obj.results['frame']['fullname'], obj.results['frame']['line'])
+                        self.logger.debug("calling exec callback")
+                        callback(filename=obj.results['frame']['fullname'], line=obj.results['frame']['line'])
                 return True
 
         return False
@@ -316,7 +316,7 @@ class Session(object):
         token = self._send("-inferior-tty-set " + slave_node, waiting=Event())
         self.wait_for(token)
 
-        return "/proc/{0}/fd/{1}".format(pid, master)
+        return master
 
     def do_breakinsert(self, **kwargs):
         def get_bkptnumber(obj):
@@ -408,6 +408,9 @@ class Session(object):
     def get_console_output(self):
         return self.console_output
 
+    def get_debugee_output(self):
+        return self.debugee_output
+
     def get_breakpoints(self, **kwargs):
         if 'filename' in kwargs:
             filename = kwargs.pop('filename')
@@ -448,7 +451,6 @@ class Session(object):
         else:
             return []
 
-    @exception(logging.getLogger(__name__))
     def get_threads(self):
         results = []
 
@@ -461,6 +463,16 @@ class Session(object):
             return threads
         else:
             return []
+
+    def wrap_child_inout(self, callback):
+
+        master_fd = self.inferior_tty_set()
+
+        self.debuggee_file = os.fdopen(master_fd, 'w')
+        self.sel.register(master_fd, selectors.EVENT_READ, self._debugee_stdout_handler)
+
+        self.debugee_output = b''
+        self.debuggee_callback = callback
 
     def send_console_cmd(self, cmd):
         if cmd == 'n':
