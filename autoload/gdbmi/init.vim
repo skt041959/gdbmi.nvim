@@ -1,4 +1,7 @@
 
+let g:gdbmi#auto_mapping = 0
+let g:gdbmi#auto_initialize = 0
+
 function! gdbmi#init#enable() abort "{{{
 endfunction "}}}
 

@@ -52,8 +52,6 @@ def exception(logger):
     return decorator
 
 
-
-
 class Session(object):
     def __init__(self, vim, debuggee, gdb="gdb"):
         """
@@ -320,25 +318,68 @@ class Session(object):
 
         return "/proc/{0}/fd/{1}".format(pid, master)
 
-    def do_breakswitch(self, **kwargs):
+    def do_breakinsert(self, **kwargs):
         def get_bkptnumber(obj):
             nonlocal bkpt_number
             bkpt_number = obj.results['bkpt']['number']
 
+        args = []
         filename = kwargs.pop('filename', None)
         line = kwargs.pop('line', None)
+        function = kwargs.pop('function', None)
+
+        if kwargs.pop('temp', False):
+            args.append('-t')
+
         if filename and line:
             l = filename + ':' + str(line)
-        else:
+        elif function:
             l = kwargs.pop('function')
+        else:
+            raise Exception(" Cannot insert break at filanem:{} line:{} function:{}"
+                            .format(filename, line, function))
+        args.append(l)
 
         self.logger.debug("breakswitch at {}".format(l))
 
         bkpt_number = None
-        token = self._send("-break-insert " + l, waiting=Event(), result_callback = get_bkptnumber)
+        token = self._send("-break-insert " + " ".join(args),
+                           waiting=Event(), result_callback = get_bkptnumber)
         self.wait_for(token)
 
         return bkpt_number
+
+    def do_breakdelete(self, **kwargs):
+        filename = kwargs['filename']
+        line = kwargs['line']
+
+        for number, bkpt in self.breakpoints.items():
+            if bkpt['fullname'] == filename and bkpt['line'] == line:
+                break
+
+        token = self._send('-break-delete {}'.format(number), waiting=Event())
+        self.wait_for(token)
+
+        self.breakpoints.pop(number)
+
+    def modify_breakpoint(self, bkpt, bkpt_new):
+        condition = bkpt_new.pop('cond', None)
+        ignore_count = bkpt_new.pop('ignore', None)
+        #  enable_count = bkpt_new.pop('enable', None)
+        enabled = bkpt_new.pop('enabled', None)
+
+        if condition:
+            token = self._send(' '.join(['-break-condition', bkpt['number'], condition]))
+
+        if ignore_count:
+            token = self._send(' '.join(['-break-after', bkpt['number'], ignore_count]))
+
+        if enabled != bkpt['enabled']:
+            if enabled == 'y':
+                token = self._send('-break-enable '+bkpt['number'])
+            elif enabled == 'n':
+                token = self._send('-break-disable '+bkpt['number'])
+
 
     def _filter(self, container, what, **kwargs):
 
@@ -359,9 +400,6 @@ class Session(object):
             token = self._send("-exec-" + cmd + " " + " ".join(args), exec_callback=callback)
             return token
 
-        if cmd == 'interrupt':
-            self.inferior_interrupt()
-
     def inferior_interrupt(self):
         self.process.send_signal(2)
 
@@ -370,8 +408,18 @@ class Session(object):
     def get_console_output(self):
         return self.console_output
 
-    def get_breakpoints(self):
-        return self.breakpoints
+    def get_breakpoints(self, **kwargs):
+        if 'filename' in kwargs:
+            filename = kwargs.pop('filename')
+            kwargs['fullname'] = filename
+
+        if 'line' in kwargs:
+            kwargs['line'] = str(kwargs['line'])
+
+        breakpoints = list(filter(lambda x: all((x[k] == v for k,v in kwargs.items())),
+                                  self.breakpoints.values()))
+
+        return breakpoints
 
     def get_locals(self):
         results = []

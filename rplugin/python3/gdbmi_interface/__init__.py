@@ -4,6 +4,7 @@ import os
 import fcntl
 import termios
 import struct
+import json
 
 import neovim
 
@@ -66,10 +67,6 @@ class GDBMI_plugin():
         self.bp_signs = {}
         self.pc_signs = {}
 
-    def _insert_panel(self, f):
-        self.panels.append(f)
-        return f
-
     def openTerminalWindow(self):
         vim = self.vim
         vim.call('gdbmi#init#createWindow')
@@ -103,15 +100,49 @@ class GDBMI_plugin():
         current = self.vim.current.window
 
         self.vim.current.window = self.gdb_window
-        self.command(":q")
+        self.command(":q!")
         self.vim.current.window = current
 
     @neovim.rpc_export('breakswitch', sync=False)
     def breakswitch(self, args):
         filename, line = args
-        bkpt_number = self.session.do_breakswitch(filename = filename, line = line)
+        if (filename, line) in self.bp_signs:
+            self.session.do_breakdelete(filename=filename, line=line)
+            bps = self.bp_signs.pop((filename, line))
+            bps.hide()
+        else:
+            bkpt_number = self.session.do_breakinsert(filename = filename, line = line)
 
-        self.bp_signs[bkpt_number] = BPSign(self.vim, filename=filename, line=line)
+            self.bp_signs[(filename, line)] = BPSign(self.vim, filename=filename, line=line)
+
+    @neovim.rpc_export('bkpt_property', sync=False)
+    def bkpt_property(self, args):
+        filename, line = args
+        bkpt = self.session.get_breakpoints(filename=filename, line=line)
+        self.logger.debug(repr(bkpt))
+        bkpt = bkpt[0] # FIXME: if get multiple breakpoint
+        bkpt_json = []
+        bkpt_json.extend(json.dumps(bkpt, indent=4).split('\n'))
+
+        self.vim.command(":new")
+        self.vim.command(":nmap <buffer> q <Plug>GDBBreakModify")
+        buf = self.vim.current.buffer
+        buf.options["swapfile"] = False
+        buf.options["buftype"] = "nofile"
+        buf.options["filetype"] = "json"
+        buf.options["syntax"] = "json"
+        buf.name = "[bkpt_property]"
+        buf.append(bkpt_json)
+
+        self.bkpt_displayd = (bkpt, buf)
+
+    @neovim.rpc_export('bkpt_modify', sync=False)
+    def bkpt_moodify(self, args):
+        bkpt, buf = self.bkpt_displayd
+        buf_content = ''.join(buf[:])
+
+        self.vim.command(":q!")
+        self.session.modify_breakpoint(bkpt, json.loads(buf_content))
 
     @neovim.rpc_export('exec', sync=False)
     def exec(self, args):
@@ -120,18 +151,34 @@ class GDBMI_plugin():
             self.vim.command('buffer +{} {}'.format(line, filename))
             self._display()
 
-        if not self.session.do_exec(args[0], *args[1:], callback=callback):
-            self.vim.err_write("exec {}\n".format(args))
+        if args[0] in ('run', 'next', 'step', 'continue', 'finish',
+                       'next-instruction', 'step-instruction'):
+            self.session.do_exec(args[0], *args[1:], callback=callback)
+
+        if args[0] is 'interrupt':
+            self.session.inferior_interrupt()
+
+        if args[0] is 'runtocursor':
+            filename, line = args
+            self.session.do_breakinsert(filename = filename, line = line, temp=True)
+            self.session.do_exec('continue', callback=callback)
 
     def _update_pc(self, frames):
         self.logger.debug("update pc sign")
-        for s in self.pc_signs.values():
-            s.hide()
 
-        self.pc_signs.clear()
+        old_pc_signs = self.pc_signs
+        self.pc_signs = {}
 
         for f in frames:
-            self.pc_signs[f['level']] = PCSign(self.vim, f['fullname'], f['line'], selected=(f['level']=='0'))
+            key = (f['fullname'], f['line'], (f['level']==0))
+            s = old_pc_signs.pop(key, None)
+            if s:
+                self.pc_signs[key] = s
+            else:
+                self.pc_signs[key] = PCSign(self.vim, *key)
+
+        for s in old_pc_signs.values():
+            s.hide()
 
     def _display(self):
         self.logger.debug("update display")
@@ -203,10 +250,8 @@ class GDBMI_plugin():
         lines = [label("breakpoints", width)]
 
         breakpoints = self.session.get_breakpoints()
-        for number,bkpt in breakpoints.items():
-            lines.append("{number}. {file}: {line}\n".format(number=number,
-                                                             file=bkpt['fullname'],
-                                                             line=bkpt['line']))
+        for bkpt in breakpoints:
+            lines.append("{number}. {fullname}: {line}\n".format_map(bkpt))
         return lines
 
     def _panel_threads(self, width):
@@ -221,7 +266,6 @@ class GDBMI_plugin():
                          " at {0[frame][fullname]}:{0[frame][line]}"
                          "\n"
                          .format(Colorize(th, name='thread', bright=True)))
-
         return lines
 
 
