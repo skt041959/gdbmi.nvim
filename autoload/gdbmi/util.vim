@@ -11,7 +11,7 @@ function! gdbmi#util#goto_last_frame(filename, line) abort
     endtry
 endfunction
 
-function! s:gdbcomplete(arg, line, pos) abort
+function! s:gdb_launch_complete(arglead, line, pos) abort
     return []
 endfunction
 
@@ -25,9 +25,8 @@ function! s:gdbnotify(event, ...) abort
     if !exists('g:gdbmi#_channel_id')
         throw '[gdbmi]: channel id not defined!'
     endif
-    " call gdbmi#util#print_error(string(a:000))
     call rpcnotify(g:gdbmi#_channel_id, a:event, a:000)
-endfun
+endfunction
 
 
 function! gdbmi#util#define_commands() abort "{{{
@@ -37,7 +36,7 @@ function! gdbmi#util#define_commands() abort "{{{
     nnoremap <silent> <Plug>GDBBreakProperty
                 \ :call <SID>gdbnotify("bkpt_property", expand("%:p"), line('.'))<CR>
 
-    command!      -nargs=*    -complete=customlist,<SID>gdbcomplete
+    command!      -nargs=*    -complete=customlist,<SID>gdb_launch_complete
                 \ GDBLaunch          call <SID>gdbnotify("launchgdb", <f-args>)
 
     command!      -nargs=+    -complete=customlist,<SID>gdb_exec_complete

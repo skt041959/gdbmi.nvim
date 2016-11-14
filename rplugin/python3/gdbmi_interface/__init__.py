@@ -13,6 +13,8 @@ from .gdbmi import Session
 from .hues import huestr
 from .vim_signs import BPSign, PCSign
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def ansi(string, style):
     return '\x1b[{}m{}\x1b[0m'.format(style, string)
@@ -57,12 +59,14 @@ class GDBMI_plugin():
     max_debugee_display = 10
 
     def __init__(self, vim):
+        def init():
+            self.vim.vars['gdbmi#_python_pid'] = os.getpid()
+            self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
+
+        self.debug, self.info, self.warn = (logger.debug, logger.info, logger.warn,)
+
         self.vim = vim
-
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
-
-        self.logger.debug('[gdbmi]plugin instance init')
+        self.vim.async_call(init)
 
         self.panels = []
 
@@ -72,14 +76,24 @@ class GDBMI_plugin():
 
     def openTerminalWindow(self):
         vim = self.vim
-        vim.call('gdbmi#init#createWindow')
+        w = self.vim.current.window
 
-        for w in vim.windows:
-            if w.buffer.name.startswith('term:'):
-                self.gdb_window = w
-                break
+        self.vim.command(":only | vnew | wincmd L")
+        self.gdb_window = self.vim.current.window
 
-        term_pid = vim.vars['gdbmi#_terminal_job_pid']
+        self.vim.command(":10new")
+        self.debugee_output_buf = self.vim.current.buffer
+        self.debugee_output_buf.name = '[output]'
+        self.debugee_output_buf.options['swapfile'] = False
+        self.debugee_output_buf.options['buftype'] = "nofile"
+
+        self.vim.current.window = self.gdb_window
+        self.vim.command(":e term://zsh")
+        term_pid = self.vim.current.buffer.vars["terminal_job_pid"]
+        term_id = self.vim.current.buffer.vars["terminal_job_id"]
+
+        self.vim.current.window = w
+
         term_tty = os.readlink("/proc/{pid}/fd/0".format(pid=term_pid))
         return term_tty
 
@@ -100,24 +114,15 @@ class GDBMI_plugin():
                                 lines = debugee_output[-n:])
             self.debugee_output = debugee_output
 
+    #  @neovim.function('GdbmiInitializePython')
     @neovim.command('GdbmiInitializePython', sync=True, nargs=0)
     def init_python(self):
-        self.vim.vars['gdbmi#_python_pid'] = os.getpid()
-        self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
+        pass
 
     @neovim.rpc_export('launchgdb', sync=False)
     def launchgdb(self, args):
         debugee = args[0]
         term_tty = self.openTerminalWindow()
-
-        w = self.vim.current.window
-        self.vim.current.window = self.gdb_window
-        self.vim.command(":10new")
-        self.debugee_output_buf = self.vim.current.buffer
-        self.debugee_output_buf.name = '[output]'
-        self.debugee_output_buf.options['swapfile'] = False
-        self.debugee_output_buf.options['buftype'] = "nofile"
-        self.vim.current.window = w
 
         self.output = open(term_tty, 'w')
         self.session = Session(debugee)
@@ -153,7 +158,7 @@ class GDBMI_plugin():
     def bkpt_property(self, args):
         filename, line = args
         bkpt = self.session.get_breakpoints(filename=filename, line=line)
-        self.logger.debug(repr(bkpt))
+        self.debug(repr(bkpt))
         bkpt = bkpt[0] # FIXME: if get multiple breakpoint
         bkpt_json = []
         bkpt_json.extend(json.dumps(bkpt, indent=4).split('\n'))
@@ -163,9 +168,15 @@ class GDBMI_plugin():
         buf = self.vim.current.buffer
         buf.options["swapfile"] = False
         buf.options["buftype"] = "nofile"
-        buf.options["filetype"] = "json"
-        buf.options["syntax"] = "json"
+        #  buf.options["syntax"] = "json"
+        self.vim.command(":setlocal syntax=json")
         buf.name = "[bkpt_property]"
+        buf[0] = "# press q to apply modify"
+        buf.append("# cond: make a condition break point, enabled: toggle the break point state")
+        src = self.vim.new_highlight_source()
+        buf.add_highlight("Comment", 0, src_id=src)
+        buf.add_highlight("Comment", 1, src_id=src)
+
         buf.append(bkpt_json)
 
         self.bkpt_displayd = (bkpt, buf)
@@ -173,7 +184,7 @@ class GDBMI_plugin():
     @neovim.rpc_export('bkpt_modify', sync=False)
     def bkpt_moodify(self, args):
         bkpt, buf = self.bkpt_displayd
-        buf_content = ''.join(buf[:])
+        buf_content = ''.join([e for e in buf if not e.startswith("#")])
 
         self.vim.command(":q!")
         self.session.modify_breakpoint(bkpt, json.loads(buf_content))
@@ -181,7 +192,7 @@ class GDBMI_plugin():
     @neovim.rpc_export('exec', sync=False)
     def exec(self, args):
         def callback(filename, line):
-            self.logger.debug("exec callback")
+            self.debug("exec callback")
             self.vim.command('buffer +{} {}'.format(line, filename))
             self._display()
 
@@ -200,7 +211,7 @@ class GDBMI_plugin():
                                  callback=functools.partial(self.vim.async_call,  fn=callback))
 
     def _update_pc(self, frames):
-        self.logger.debug("update pc sign")
+        self.debug("update pc sign")
 
         old_pc_signs = self.pc_signs
         self.pc_signs = {}
@@ -217,7 +228,7 @@ class GDBMI_plugin():
             s.hide()
 
     def _display(self):
-        self.logger.debug("update display")
+        self.debug("update display")
         raw = fcntl.ioctl(self.output.fileno(), termios.TIOCGWINSZ, ' ' * 4)
         height, width = struct.unpack('hh', raw)
 
@@ -296,7 +307,7 @@ class GDBMI_plugin():
         results = self.session.get_threads()
         threads = results['threads']
         for th in threads:
-            self.logger.debug(repr(th))
+            self.debug(repr(th))
             lines.append("[{0[id]}] {0[target-id]}"
                          " from {0[frame][addr]} in {0[frame][func]}"
                          " at {0[frame][fullname]}:{0[frame][line]}"

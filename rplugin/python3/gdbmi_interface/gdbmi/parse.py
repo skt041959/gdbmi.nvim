@@ -6,6 +6,12 @@ import collections
 from ast import literal_eval
 import logging
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+debug, info, warn, error = (logger.debug, logger.info, logger.warn, logger.error)
+
+
 TOKEN_NUM = r'(?P<TOKEN_NUM>^\d+)'
 RESULT_CLASS = r'\^(?P<RESULT_CLASS>(done|running|connected|error|exit))'
 EXEC_CLASS = r'\*(?P<EXEC_CLASS>[\w-]+)'
@@ -63,8 +69,6 @@ class GDBOutputParse:
             'LOG_OUTPUT'    : self.stream_record,
         }
         self.string_parser = literal_eval
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.ERROR)
 
     @staticmethod
     def generate_tokens(text):
@@ -207,7 +211,7 @@ class GDBOutputParse:
 
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
-        self.logger.debug(repr(self.tok))
+        debug(repr(self.tok))
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:

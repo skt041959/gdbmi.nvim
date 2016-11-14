@@ -21,6 +21,16 @@ except:
     from hues import huestr
 
 
+logger = logging.getLogger(__name__)
+fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
+fh.setFormatter(logging.Formatter(
+    '%(asctime)s [%(levelname)s @ '
+    '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
+logger.addHandler(fh)
+logger.setLevel(logging.DEBUG)
+debug, info, warn = (logger.debug, logger.info, logger.warn,)
+
+
 class ErrorArgumentsException(Exception): pass
 
 
@@ -57,14 +67,7 @@ class Session(object):
         """
         >>> p = Session("test/hello")
         """
-
-        self.logger = logging.getLogger(__name__)
-        fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
-        fh.setFormatter(logging.Formatter(
-            '%(asctime)s [%(levelname)s @ '
-            '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
-        self.logger.addHandler(fh)
-        self.logger.setLevel(logging.DEBUG)
+        self.debug, self.info, self.warn = (logger.debug, logger.info, logger.warn,)
 
         self.buf = ""
         self.is_attached = False
@@ -102,7 +105,7 @@ class Session(object):
         self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
         self.reader.start()
 
-        self.logger.debug("session: {} gdb: {}".format(debuggee, gdb))
+        self.debug("session: {} gdb: {}".format(debuggee, gdb))
 
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,
@@ -132,7 +135,7 @@ class Session(object):
         buf = token + cmd + "\n"
         self.process.stdin.write(buf.encode('utf8'))
 
-        self.logger.debug("SENT[{0}]: {1}".format(token, huestr(cmd).green.colorized))
+        self.debug("SENT[{0}]: {1}".format(token, huestr(cmd).green.colorized))
         return token
 
     def _read(self, selector):
@@ -142,29 +145,29 @@ class Session(object):
                 try:
                     key.data(key.fileobj, mask)
                 except GDBStopped:
-                    self.logger.error("GDBStopped")
+                    self.error("GDBStopped")
                     return
 
-    @exception(logging.getLogger(__name__))
+    @exception(logger)
     def _gdb_stdout_handler(self, fileobj, mask):
         line = fileobj.readline().decode('utf8')
         if not line:
             raise GDBStopped
-        self.logger.debug('RAW: ' + huestr(line).green.colorized)
+        self.debug('RAW: ' + huestr(line).green.colorized)
         self._handle(line)
 
-    @exception(logging.getLogger(__name__))
+    @exception(logger)
     def _debugee_stdout_handler(self, fileobj, mask):
         data = os.read(fileobj, 1024)
         if not data:
             raise Exception
-        self.logger.debug('DEBUGEE: ' + huestr(data.decode('utf8', errors="ignore")).red.colorized)
+        self.debug('DEBUGEE: ' + huestr(data.decode('utf8', errors="ignore")).red.colorized)
         self.debugee_output += data
         self.debuggee_callback(self.debugee_output)
 
     def _handle(self, line):
         def _ignore(token, obj):
-            self.logger.warn(["IGN:", token, obj])
+            warn(["IGN:", token, obj])
             return False
 
         self.gdb_stdout_buf.append(line)
@@ -175,13 +178,13 @@ class Session(object):
         else:
             if obj is self.parser.GDB_PROMPT:
                 token = self.last_valid_token
-                self.logger.debug("handle token: {}, {} objs".format(token, len(self.gdb_stdout_objs)))
+                self.debug("handle token: {}, {} objs".format(token, len(self.gdb_stdout_objs)))
                 command = self.commands[token]
                 inferior_handler = command.get('handler', None)
                 event = command.get('waiting', None)
                 while self.gdb_stdout_objs:
                     obj = self.gdb_stdout_objs.popleft()
-                    self.logger.debug("obj {}".format(obj.What))
+                    self.debug("obj {}".format(obj.What))
                     handler = {'ResultRecord'   : self._handle_result,
                                'AsyncRecord'    : self._handle_async,
                                'StreamRecord'   : self._handle_stream,
@@ -197,7 +200,7 @@ class Session(object):
                 self.gdb_stdout_objs.append(obj)
 
     def _handle_result(self, token, obj):
-        self.logger.debug(obj.What)
+        self.debug(obj.What)
         handled = False
         if obj.result_class == "done" or obj.result_class == "running":
             if token:
@@ -215,7 +218,7 @@ class Session(object):
         return handled
 
     def _handle_async(self, token, obj, **kwargs):
-        self.logger.debug(obj.What)
+        self.debug(obj.What)
         if obj.async_class == "NOTIFY_CLASS":
             if obj.name == "thread-group-added":
                 self._add_thread_group(obj.results)
@@ -224,19 +227,19 @@ class Session(object):
             if obj.name == "thread-group-started":
                 tg = self.thread_groups[obj.results['id']]
                 tg['pid'] = obj.results['pid']
-                self.logger.info(tg)
+                self.info(tg)
                 return True
 
             if obj.name == "thread-created":
                 tg = self.thread_groups[obj.results['group-id']]
                 tg['threads'].add(obj.results['id'])
-                self.logger.info(tg)
+                self.info(tg)
                 return True
 
             if obj.name == "library-loaded":
                 tg = self.thread_groups[obj.results['thread-group']]
                 tg['dl'][obj.results['id']] = obj.results
-                self.logger.info(tg)
+                self.info(tg)
                 return True
 
             if obj.name == "breakpoint-modified":
@@ -254,14 +257,14 @@ class Session(object):
                     command = self.commands[token]
                     callback = command.get('exec_callback', None)
                     if callback:
-                        self.logger.debug("calling exec callback")
+                        self.debug("calling exec callback")
                         callback(filename=obj.results['frame']['fullname'], line=obj.results['frame']['line'])
                 return True
 
         return False
 
     def _handle_stream(self, token, obj):
-        #  self.logger.debug(repr(obj))
+        #  self.debug(repr(obj))
         if obj.stream_class == 'CONSOLE_OUTPUT':
             self.console_output.append(obj.output)
         return True
@@ -276,7 +279,7 @@ class Session(object):
             "dl": {},
         }
         self.thread_groups[group_id] = tg
-        self.logger.info(tg)
+        self.info(tg)
 
     def add_callback(self, target, proc, filter = None, *kwds):
         to_add = {
@@ -302,11 +305,11 @@ class Session(object):
         else:
             self.breakpoints[number] = dict(info)
 
-        self.logger.info(['updated BREAKPOINT', self.breakpoints[number]])
+        self.info(['updated BREAKPOINT', self.breakpoints[number]])
         self._callback('bkpt')
 
     def wait_for(self, token):
-        self.logger.debug("waiting for {}".format(token))
+        self.debug("waiting for {}".format(token))
         return self.commands[token]['waiting'].wait()
 
     def inferior_tty_set(self):
@@ -340,7 +343,7 @@ class Session(object):
                             .format(filename, line, function))
         args.append(l)
 
-        self.logger.debug("breakswitch at {}".format(l))
+        self.debug("breakswitch at {}".format(l))
 
         bkpt_number = None
         token = self._send("-break-insert " + " ".join(args),
@@ -384,7 +387,7 @@ class Session(object):
     def _filter(self, container, what, **kwargs):
 
         def f(token, obj):
-            #  self.logger.debug(repr(obj))
+            #  self.debug(repr(obj))
             if obj.What == what:
                 for k,v in kwargs.items():
                     if getattr(obj, k, None) != v:
