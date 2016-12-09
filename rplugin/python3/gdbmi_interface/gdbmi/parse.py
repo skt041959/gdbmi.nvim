@@ -8,7 +8,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 TOKEN_NUM = r'(?P<TOKEN_NUM>^\d+)'
@@ -215,7 +215,7 @@ class GDBOutputParse:
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
         self.debug(repr(self.tok))
-        print(self.tok)
+        #  print(self.tok)
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:

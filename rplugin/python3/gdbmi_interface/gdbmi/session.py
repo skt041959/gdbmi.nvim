@@ -22,12 +22,6 @@ except:
 
 
 logger = logging.getLogger(__name__)
-fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
-fh.setFormatter(logging.Formatter(
-    '%(asctime)s [%(levelname)s @ '
-    '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
-logger.addHandler(fh)
-logger.setLevel(logging.DEBUG)
 debug, info, warn = (logger.debug, logger.info, logger.warn,)
 
 
@@ -67,6 +61,12 @@ class Session(object):
         """
         >>> p = Session("test/hello")
         """
+        fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
+        fh.setFormatter(logging.Formatter(
+            '%(asctime)s [%(levelname)s @ '
+            '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
+        logger.addHandler(fh)
+        logger.setLevel(logging.DEBUG)
         self.debug, self.info, self.warn = (logger.debug, logger.info, logger.warn,)
 
         self.buf = ""
@@ -215,6 +215,19 @@ class Session(object):
                     callback(obj)
 
             handled = True
+        elif obj.result_class == "error":
+            if token:
+                command = self.commands[token]
+
+            if 'bkpt' in obj.results:
+                self._update_breakpoint(obj.results['bkpt'])
+            if command:
+                command['state'] = obj.What
+                callback = command.get('result_callback', None)
+                if callback:
+                    callback(obj)
+
+            handled = True
         return handled
 
     def _handle_async(self, token, obj, **kwargs):
@@ -227,19 +240,19 @@ class Session(object):
             if obj.name == "thread-group-started":
                 tg = self.thread_groups[obj.results['id']]
                 tg['pid'] = obj.results['pid']
-                self.info(tg)
+                #  self.info(tg)
                 return True
 
             if obj.name == "thread-created":
                 tg = self.thread_groups[obj.results['group-id']]
                 tg['threads'].add(obj.results['id'])
-                self.info(tg)
+                #  self.info(tg)
                 return True
 
             if obj.name == "library-loaded":
                 tg = self.thread_groups[obj.results['thread-group']]
                 tg['dl'][obj.results['id']] = obj.results
-                self.info(tg)
+                #  self.info(obj.results['id'])
                 return True
 
             if obj.name == "breakpoint-modified":
@@ -258,7 +271,9 @@ class Session(object):
                     callback = command.get('exec_callback', None)
                     if callback:
                         self.debug("calling exec callback")
-                        callback(filename=obj.results['frame']['fullname'], line=obj.results['frame']['line'])
+                        callback(frame=obj.results['frame'])
+                        callback(filename=obj.results['frame']['fullname'],
+                                 line=obj.results['frame']['line'])
                 return True
 
         return False
@@ -383,7 +398,6 @@ class Session(object):
             elif enabled == 'n':
                 token = self._send('-break-disable '+bkpt['number'])
 
-
     def _filter(self, container, what, **kwargs):
 
         def f(token, obj):
@@ -405,8 +419,12 @@ class Session(object):
 
     def inferior_interrupt(self):
         self.process.send_signal(2)
-
         return  True
+
+    def inferior_stdin(self, content):
+        if not content.endswith("\n"):
+            content += "\n"
+        self.debuggee_file.write(content)
 
     def get_console_output(self):
         return self.console_output

@@ -95,16 +95,19 @@ class GDBMI_plugin():
         self.vim.current.window = w
 
         term_tty = os.readlink("/proc/{pid}/fd/0".format(pid=term_pid))
-        return term_tty
+        self.debug("term_tty: {}".format(term_tty))
+        return term_pid, term_tty
 
     def wrap_debugee_output(self, output):
         def update_output_buf(index, lines):
-            self.debugee_output_buf[index] = None
-            self.debugee_output_buf.append(lines)
+            self.debugee_output_buf.append(lines, index)
 
         try:
             debugee_output = output.decode('utf8').splitlines()
+            #  if output.endswith(b'\n'):
+            #      debugee_output.append("")
             n = len(debugee_output) - len(self.debugee_output)
+            self.debug("{} --- {}".format(self.debugee_output, debugee_output))
         except UnicodeError as e:
             self.vim.err_write(e)
             self.vim.err_write("\n")
@@ -114,21 +117,26 @@ class GDBMI_plugin():
                                 lines = debugee_output[-n:])
             self.debugee_output = debugee_output
 
-    #  @neovim.function('GdbmiInitializePython')
     @neovim.command('GdbmiInitializePython', sync=True, nargs=0)
     def init_python(self):
-        pass
+        self.vim.vars['gdbmi#_python_pid'] = os.getpid()
+        self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
 
     @neovim.rpc_export('launchgdb', sync=False)
     def launchgdb(self, args):
         debugee = args[0]
-        term_tty = self.openTerminalWindow()
+        term_pid, term_tty = self.openTerminalWindow()
 
-        self.output = open(term_tty, 'w')
+        try:
+            self.output = open(term_tty, 'w')
+        except PermissionError:
+            self.vim.err_write("{}\n".format(term_pid))
+            return
+
         self.session = Session(debugee)
 
         self.session.wrap_child_inout(callback=self.wrap_debugee_output)
-        self.debugee_output = ''
+        self.debugee_output = []
 
         self._display()
 
@@ -160,8 +168,9 @@ class GDBMI_plugin():
         bkpt = self.session.get_breakpoints(filename=filename, line=line)
         self.debug(repr(bkpt))
         bkpt = bkpt[0] # FIXME: if get multiple breakpoint
-        bkpt_json = []
-        bkpt_json.extend(json.dumps(bkpt, indent=4).split('\n'))
+        #  bkpt_json = []
+        #  bkpt_json.extend(json.dumps(bkpt, indent=4).split('\n'))
+        bkpt_json = json.dumps(bkpt, indent=4).splitlines()
 
         self.vim.command(":new")
         self.vim.command(":nmap <buffer> q <Plug>GDBBreakModify")
@@ -178,6 +187,7 @@ class GDBMI_plugin():
         buf.add_highlight("Comment", 1, src_id=src)
 
         buf.append(bkpt_json)
+        self.vim.current.window.cursor = (3, 0)
 
         self.bkpt_displayd = (bkpt, buf)
 
@@ -191,10 +201,20 @@ class GDBMI_plugin():
 
     @neovim.rpc_export('exec', sync=False)
     def exec(self, args):
-        def callback(filename, line):
-            self.debug("exec callback")
-            self.vim.command('buffer +{} {}'.format(line, filename))
-            self._display()
+        def callback(**kwargs):
+            frame = kwargs.pop("frame", None)
+            if frame is not None:
+                filename = frame.get('fullname', None)
+                if filename:
+                    line = frame['line']
+                    self.debug("exec callback")
+                    self.vim.command('buffer +{} {}'.format(line, filename))
+                    self._display()
+
+            error = kwargs.pop("error", None)
+            if error is not None:
+                msg = error['msg']
+                self.vim.err_write(msg + '\n')
 
         if args[0] in ('run', 'next', 'step', 'continue', 'finish',
                        'next-instruction', 'step-instruction'):
@@ -209,6 +229,14 @@ class GDBMI_plugin():
             self.session.do_breakinsert(filename = filename, line = line, temp=True)
             self.session.do_exec('continue',
                                  callback=functools.partial(self.vim.async_call,  fn=callback))
+
+    @neovim.rpc_export('inferior_stdin', sync=False)
+    def inferior_stdin(self, args=None):
+        if not args:
+            content = self.vim.funcs.input("Input>> ")
+        else:
+            content = args[0]
+        self.session.inferior_stdin(content)
 
     def _update_pc(self, frames):
         self.debug("update pc sign")
@@ -258,9 +286,12 @@ class GDBMI_plugin():
         longesttype = max((len(v['type']) for v in variables))
 
         for v in variables:
-            line = (huestr(v['name']).green.colorized + " "*(longestname-len(v['name'])+1) +
-                    huestr(v['type']).green.colorized + " "*(longesttype-len(v['type'])) + ":" +
-                    huestr(v['value']).green.colorized + "\n")
+            name_s = huestr(v['name']).green
+            type_s = huestr(v['type']).green
+            value_s = huestr(v.get("value", "")).green
+            line = (name_s.colorized + " "*(longestname-len(name_s)+1) +
+                    type_s.colorized + " "*(longesttype-len(type_s)) + ":" +
+                    value_s.colorized + "\n")
             lines.append(line)
 
         return lines
@@ -308,11 +339,23 @@ class GDBMI_plugin():
         threads = results['threads']
         for th in threads:
             self.debug(repr(th))
-            lines.append("[{0[id]}] {0[target-id]}"
-                         " from {0[frame][addr]} in {0[frame][func]}"
-                         " at {0[frame][fullname]}:{0[frame][line]}"
-                         "\n"
-                         .format(Colorize(th, name='thread', bright=True)))
+            if "fullname" in th["frame"]:
+                lines.append("[{0[id]}] {0[target-id]}"
+                             " at {0[frame][addr]} in {0[frame][func]}"
+                             " at {0[frame][fullname]}:{0[frame][line]}"
+                             "\n"
+                             .format(Colorize(th, name='thread', bright=True)))
+            elif "from" in th["frame"]:
+                lines.append("[{0[id]}] {0[target-id]}"
+                             " at {0[frame][addr]} in {0[frame][func]}"
+                             " from {0[frame][from]}"
+                             "\n"
+                             .format(Colorize(th, name='thread', bright=True)))
+            else:
+                lines.append("[{0[id]}] {0[target-id]}"
+                             " from {0[frame][addr]} in {0[frame][func]}"
+                             "\n"
+                             .format(Colorize(th, name='thread', bright=True)))
         return lines
 
 
