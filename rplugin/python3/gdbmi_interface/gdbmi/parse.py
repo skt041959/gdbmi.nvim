@@ -8,8 +8,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
-debug, info, warn, error = (logger.debug, logger.info, logger.warn, logger.error)
+logger.setLevel(logging.DEBUG)
 
 
 TOKEN_NUM = r'(?P<TOKEN_NUM>^\d+)'
@@ -17,9 +16,9 @@ RESULT_CLASS = r'\^(?P<RESULT_CLASS>(done|running|connected|error|exit))'
 EXEC_CLASS = r'\*(?P<EXEC_CLASS>[\w-]+)'
 STATUS_CLASS = r'\+(?P<STATUS_CLASS>[\w-]+)'
 NOTIFY_CLASS = r'=(?P<NOTIFY_CLASS>[\w-]+)'
-CONSOLE_OUTPUT = r'^~\"(?P<CONSOLE_OUTPUT>(.*?))\"(?=\n)'
-TARGET_OUTPUT = r'^@\"(?P<TARGET_OUTPUT>(.*?))\"(?=\n)'
-LOG_OUTPUT = r'^&\"(?P<LOG_OUTPUT>(.*?))\"(?=\n)'
+CONSOLE_OUTPUT = r'^~\"(?P<CONSOLE_OUTPUT>((?:\\.|.)*?))\"(?=\n)'
+TARGET_OUTPUT = r'^@\"(?P<TARGET_OUTPUT>((?:\\.|.)*?))\"(?=\n)'
+LOG_OUTPUT = r'^&\"(?P<LOG_OUTPUT>((?:\\.|.)*?))\"(?=\n)'
 L_TUPLE = r'(?P<L_TUPLE>\{)'
 R_TUPLE = r'(?P<R_TUPLE>\})'
 #  TUPLE = r'\{(?P<TUPLE>(.*))\}'
@@ -27,7 +26,7 @@ L_LIST = r'(?P<L_LIST>\[)'
 R_LIST = r'(?P<R_LIST>\])'
 #  LIST = r'\[(?P<LIST>(.*?))\]'
 VARIABLE = r'(?P<VARIABLE>[\w-]+)='
-CONST = r'\"(?P<CONST>(.*?))\"'
+CONST = r'\"(?P<CONST>((?:\\.|.)*?))\"'
 GDB = r'(?P<GDB>\(gdb\))'
 COMMA = r'(?P<COMMA>\,)'
 NL = r'(?P<NL>\n)'
@@ -58,6 +57,10 @@ class ParseError(Exception):
 class GDBOutputParse:
 
     def __init__(self):
+        self.debug, self.info, self.warn, self.error = (logger.debug,
+                                                        logger.info,
+                                                        logger.warn,
+                                                        logger.error)
         self.GDB_PROMPT = object()
         self.record_parse_func = {
             'RESULT_CLASS'  : self.result_record,
@@ -211,7 +214,8 @@ class GDBOutputParse:
 
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
-        debug(repr(self.tok))
+        self.debug(repr(self.tok))
+        print(self.tok)
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:
@@ -221,14 +225,8 @@ class GDBOutputParse:
             return False
 
 
-def test():
+def test(output):
     parser = GDBOutputParse()
-    output = '*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"\n'
-    print(parser.parse(output))
-
-def test2():
-    parser = GDBOutputParse()
-    output = '0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},state="stopped",core="1"}],current-thread-id="1"\n'
     print(parser.parse((output)))
 
 
@@ -244,9 +242,14 @@ def main(filename):
 
 
 if __name__ == "__main__":
-    import sys
-    for tok in GDBOutputParse.generate_tokens(output):
-        print(tok)
-    test2()
+    #  import sys
+    #  for tok in GDBOutputParse.generate_tokens(output):
+    #      print(tok)
+    test1 = r'*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"' + '\n'
+    test2 = r'0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},state="stopped",core="1"}],current-thread-id="1"' + '\n'
+    test3 = r'*stopped,reason="end-stepping-range",frame={addr="0x0000000000411e80",func="callParallel_calculate",args=[{name="outputFilePath",value="\"./temp_data_www_2.dat\""},{name="save_png",value="true"}],file="/home/skt/code/freeformed_surface/src/generate_dat.cpp",fullname="/home/skt/code/freeformed_surface/src/generate_dat.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"' + '\n'
     #  main(sys.argv[1])
+    test(test1)
+    test(test2)
+    test(test3)
 
