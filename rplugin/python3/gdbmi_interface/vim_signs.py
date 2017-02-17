@@ -1,3 +1,4 @@
+import neovim
 
 # encoding: utf-8
 
@@ -26,8 +27,12 @@ class VimSign():
 
     def show(self):
         cmd = "sign place {id} name={name} line={line} file={filename}".format_map(self)
-        self.vim.command(cmd)
-        self.hidden = False
+        try:
+            self.vim.command(cmd)
+        except neovim.api.nvim.NvimError:
+            pass
+        else:
+            self.hidden = False
 
     def hide(self):
         cmd = "sign unplace {id}".format(id=self.id)

@@ -245,12 +245,14 @@ class GDBMI_plugin():
         self.pc_signs = {}
 
         for f in frames:
-            key = (f['fullname'], f['line'], (f['level']==0))
-            s = old_pc_signs.pop(key, None)
-            if s:
-                self.pc_signs[key] = s
-            else:
-                self.pc_signs[key] = PCSign(self.vim, *key)
+            filename = f.get('fullname', None)
+            if filename:
+                key = (filename, f['line'], (f['level']==0))
+                s = old_pc_signs.pop(key, None)
+                if s:
+                    self.pc_signs[key] = s
+                else:
+                    self.pc_signs[key] = PCSign(self.vim, *key)
 
         for s in old_pc_signs.values():
             s.hide()
@@ -301,9 +303,14 @@ class GDBMI_plugin():
         frames = self.session.get_frames()
 
         for f in frames:
-            lines.append("[{0[level]}] from {0[addr]} in {0[func]} at {0[file]}:{0[line]}"
-                         "\n"
-                         .format(Colorize(f, name='frame')))
+            if 'file' in f:
+                lines.append("[{0[level]}] from {0[addr]} in {0[func]} at {0[file]}:{0[line]}"
+                             "\n"
+                             .format(Colorize(f, name='frame')))
+            else:
+                lines.append("[{0[level]}] from {0[addr]} in {0[func]} from {0[from]}"
+                             "\n"
+                             .format(Colorize(f, name='frame')))
 
         self._update_pc(frames)
 
