@@ -5,7 +5,6 @@ import pty
 import sys
 import fcntl
 import selectors
-import logging
 import functools
 from threading import Thread, Event
 from collections import deque
@@ -13,16 +12,9 @@ from collections import deque
 from collections import deque
 from subprocess import Popen, PIPE
 
-from .parse import GDBOutputParse, ParseError
-from .parse import ResultRecord, AsyncRecord, StreamRecord
-try:
-    from ..hues import huestr
-except:
-    from hues import huestr
-
-
-logger = logging.getLogger(__name__)
-debug, info, warn = (logger.debug, logger.info, logger.warn,)
+from gdbmi_interface.util import exception
+from gdbmi_interface.gdbmi.parse import GDBOutputParse, ParseError
+from gdbmi_interface.gdbmi.parse import ResultRecord, AsyncRecord, StreamRecord
 
 
 class ErrorArgumentsException(Exception): pass
@@ -31,44 +23,11 @@ class ErrorArgumentsException(Exception): pass
 class GDBStopped(Exception): pass
 
 
-def exception(logger):
-    """
-    A decorator that wraps the passed in function and logs
-    exceptions should one occur
-
-    @param logger: The logging object
-    """
-
-    def decorator(func):
-
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except:
-                # log the exception
-                err = "There was an exception in  "
-                err += func.__name__
-                logger.exception(err)
-
-                # re-raise the exception
-                raise
-        return wrapper
-    return decorator
-
 
 class Session(object):
-    def __init__(self, debuggee, gdb="gdb"):
-        """
-        >>> p = Session("test/hello")
-        """
-        fh = logging.FileHandler('/home/skt/tmp/gdbmi.nvim.log')
-        fh.setFormatter(logging.Formatter(
-            '%(asctime)s [%(levelname)s @ '
-            '%(filename)s:%(funcName)s:%(lineno)s] %(process)s - %(message)s'))
-        logger.addHandler(fh)
-        logger.setLevel(logging.DEBUG)
-        self.debug, self.info, self.warn = (logger.debug, logger.info, logger.warn,)
+    def __init__(self, tty, logger):
 
+        self.tty = tty
         self.buf = ""
         self.is_attached = False
 
@@ -79,11 +38,6 @@ class Session(object):
         self._callbacks = {}
         self._hijacked = {}
 
-        self.debuggee = debuggee
-
-        self.process = self._launch_gdb(debuggee, gdb)
-        self.exec_state = 'ready'
-
         self.parser = GDBOutputParse()
         self.console_output = []
         self.token = 0
@@ -92,20 +46,9 @@ class Session(object):
         self.gdb_stdout_objs = deque()
 
         self.sel = selectors.DefaultSelector()
-        self.sel.register(self.process.stdout, selectors.EVENT_READ, self._gdb_stdout_handler)
-        self.commands[None] = {}
-        while True:
-            events = self.sel.select(3)
-            for key, mask in events:
-                key.data(key.fileobj, mask)
-            if not events:
-                break
-        self.commands.clear()
-
+        self.sel.register(self.tty, selectors.EVENT_READ, self._gdb_stdout_handler)
         self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
         self.reader.start()
-
-        self.debug("session: {} gdb: {}".format(debuggee, gdb))
 
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,
@@ -135,7 +78,6 @@ class Session(object):
         buf = token + cmd + "\n"
         self.process.stdin.write(buf.encode('utf8'))
 
-        self.debug("SENT[{0}]: {1}".format(token, huestr(cmd).green.colorized))
         return token
 
     def _read(self, selector):
@@ -148,22 +90,12 @@ class Session(object):
                     self.error("GDBStopped")
                     return
 
-    @exception(logger)
+    #  @exception(logger)
     def _gdb_stdout_handler(self, fileobj, mask):
         line = fileobj.readline().decode('utf8')
         if not line:
             raise GDBStopped
-        self.debug('RAW: ' + huestr(line).green.colorized)
         self._handle(line)
-
-    @exception(logger)
-    def _debugee_stdout_handler(self, fileobj, mask):
-        data = os.read(fileobj, 1024)
-        if not data:
-            raise Exception
-        self.debug('DEBUGEE: ' + huestr(data.decode('utf8', errors="ignore")).red.colorized)
-        self.debugee_output += data
-        self.debuggee_callback(self.debugee_output)
 
     def _handle(self, line):
         def _ignore(token, obj):
@@ -444,70 +376,6 @@ class Session(object):
                                   self.breakpoints.values()))
 
         return breakpoints
-
-    def get_locals(self):
-        results = []
-
-        if self.exec_state == 'stopped':
-            token = self._send("-stack-list-variables --simple-values",
-                               self._filter(results, 'ResultRecord', result_class='done'),
-                               waiting=Event())
-
-            self.wait_for(token)
-            variables = results[0].results['variables']
-            return variables
-        else:
-            return []
-
-    def get_frames(self):
-        results = []
-
-        if self.exec_state == 'stopped':
-            token = self._send("-stack-list-frames",
-                               self._filter(results, 'ResultRecord', result_class='done'),
-                               waiting=Event())
-            self.wait_for(token)
-            frames = results[0].results['stack']
-            return frames
-        else:
-            return []
-
-    def get_threads(self):
-        results = []
-
-        if self.exec_state == 'stopped':
-            token = self._send("-thread-info",
-                               self._filter(results, 'ResultRecord', result_class='done'),
-                               waiting=Event())
-            self.wait_for(token)
-            threads = results[0].results
-            return threads
-        else:
-            return []
-
-    def wrap_child_inout(self, callback):
-
-        master_fd = self.inferior_tty_set()
-
-        self.debuggee_file = os.fdopen(master_fd, 'w')
-        self.sel.register(master_fd, selectors.EVENT_READ, self._debugee_stdout_handler)
-
-        self.debugee_output = b''
-        self.debuggee_callback = callback
-
-    def send_console_cmd(self, cmd):
-        if cmd == 'n':
-            self.exec('next', [])
-            return
-        if cmd == 'c':
-            self.exec('continue', [])
-            return
-        if cmd == 'r':
-            self.exec('run', [])
-            return
-
-        token = self._send("-interpreter-exec console " + cmd, self._handle)
-        #  self.wait_for(token)
 
     def send_cmd(self, cmd):
         token = self._send(cmd, self._handle)

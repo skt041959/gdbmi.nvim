@@ -5,16 +5,6 @@ endif
 
 let g:loaded_gdbmi = 1
 
-if !exists('g:gdbmi#session#file')
-    let g:gdbmi#session#file = 'gdbmi-nvim.json'
-endif
-if !exists('g:gdbmi#session#mode_setup')
-    let g:gdbmi#session#mode_setup = 'gdbmi#layout#setup'
-endif
-if !exists('g:gdbmi#session#mode_teardown')
-    let g:gdbmi#session#mode_teardown = 'gdbmi#layout#teardown'
-endif
-
 let s:bp_symbol = get(g:, 'gdbmi#sign#bp_symbol', 'B>')
 let s:pc_symbol = get(g:, 'gdbmi#sign#pc_symbol', '->')
 
@@ -35,13 +25,4 @@ execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
 
 call gdbmi#util#define_commands()
 
-if g:gdbmi#auto_mapping
-    nmap <leader>bs <Plug>GDBBreakSwitch
-    nmap <leader>bp <Plug>GDBBreakProperty
-    nnoremap <F5> :GDBExec run<CR>
-    nnoremap <F8> :GDBExec continue<CR>
-    nnoremap <F9> :GDBExec next<CR>
-    nnoremap <F10> :GDBExec step<CR>
-    nnoremap <F11> :GDBExec interrupt<CR>
-endif
-
+command! -nargs=1 -complete=shellcmd GDBLaunch call gdbmi#init#Spawn(<q-args>)
