@@ -1,9 +1,11 @@
 import os
 import functools
+import tempfile
 
 import pynvim
 
 from gdbmi_interface.gdbmi import Session
+from gdbmi_interface.ui import ui
 
 
 @pynvim.plugin
@@ -12,6 +14,7 @@ class GDBMI_plugin():
     def __init__(self, vim):
 
         self.vim = vim
+        ui.setVim(vim)
 
         self.panels = []
 
@@ -25,7 +28,7 @@ class GDBMI_plugin():
         self.pty_master = master
         slave_path = os.ttyname(slave)
 
-        self.session = Session(self.pty_master, None) # FIXME
+        self.session = Session(self.pty_master, ui)
 
         return slave_path
 
@@ -93,6 +96,10 @@ class GDBMI_plugin():
 
 def main(vim):
     plugin_instance = GDBMI_plugin(vim)
+
+    print(plugin_instance.gdbmi_start(None))
+
+    plugin_instance.session.reader.join()
 
 
 if __name__ == "__main__":

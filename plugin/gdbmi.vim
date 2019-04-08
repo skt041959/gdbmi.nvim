@@ -14,14 +14,14 @@ highlight default link GDBUnselectedPCLine DiffChange
 highlight default link GDBSelectedPCSign Debug
 highlight default link GDBSelectedPCLine DiffText
 
-execute 'sign define gdbsign_bpres text=' . s:bp_symbol .
+execute 'sign define GdbmiBreakpoint text=' . s:bp_symbol .
     \ ' texthl=GDBBreakpointSign linehl=GDBBreakpointLine'
 
-execute 'sign define gdbsign_pcsel text=' . s:pc_symbol .
+execute 'sign define GdbmiCurrentLine text=' . s:pc_symbol .
     \ ' texthl=GDBSelectedPCSign linehl=GDBSelectedPCLine'
 
-execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
-    \ ' texthl=GDBUnselectedPCSign linehl=GDBUnselectedPCLine'
+" execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
+"     \ ' texthl=GDBUnselectedPCSign linehl=GDBUnselectedPCLine'
 
 call gdbmi#util#define_commands()
 

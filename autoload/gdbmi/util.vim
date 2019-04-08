@@ -2,38 +2,49 @@ function! gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
+function! gdbmi#util#util_init()
+  let t:gdbmi_win_jump_window = 1
+  let t:gdbmi_win_current_buf = -1
+
+  let t:gdbmi_cursor_line = -1
+  let t:gdbmi_cursor_sign_id = -1
+endfunction
+
 function! gdbmi#util#jump(file, line)
   let l:window = winnr()
   let l:mode = mode()
-  exe t:gdbmi_win_jump_window 'wincmd w'
+  exe t:gdbmi_win_jump_window.'wincmd w'
   let t:gdbmi_win_current_buf = bufnr('')
   let l:target_buf = bufnr(a:file, 1)
 
   if bufnr('%') != l:target_buf
     exe 'noswapfile buffer ' l:target_buf
     let t:gdbmi_win_current_buf = l:target_buf
-    call refresh()
   endif
 
   exe 'normal! '.a:line.'G'
   let t:gdbmi_new_cursor_line = a:line
-  exe l:window 'window w'
-  call gdbmi#setCursorSign()
+  exe l:window.'wincmd w'
+  call gdbmi#util#set_cursor_sign()
   if l:mode ==? 't' || l:mode ==? 'i'
     startinsert
   endif
 endfunction
 
-function! gdbmi#util#setCursorSign()
+function! gdbmi#util#set_cursor_sign()
   let l:old = t:gdbmi_cursor_sign_id
   let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
-  let l:current_buf = getcurrenbuf() " TODO
+  let l:current_buf = t:gdbmi_win_current_buf
   if t:gdbmi_new_cursor_line != -1 && l:current_buf != -1
     exe 'sign place '.t:gdbmi_cursor_sign_id.' name=GdbmiCurrentLine line='.t:gdbmi_new_cursor_line.' buffer='.l:current_buf
   endif
   if l:old != -1
     exe 'sign unplace '.l:old
   endif
+endfunction
+
+function! gdbmi#util#set_breakpoint_sign(id, file, line)
+  exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
 endfunction
 
 function! gdbmi#util#get_selection() abort

@@ -11,6 +11,7 @@ long seqsum(long n) {
         {
             ret += 1;
         }
+        printf("n: %d\n", n);
     }
     return ret;
 }
@@ -21,7 +22,7 @@ int main () {
     printf("Hello world\n");
 
     printf("Enter a number:\n");
-    scanf("%ld", &a);
+    // scanf("%ld", &a);
     a = 1000000;
 
     b = seqsum(a);

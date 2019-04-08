@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import signal
 import pty
 import sys
 import fcntl
@@ -12,23 +13,20 @@ from collections import deque
 from collections import deque
 from subprocess import Popen, PIPE
 
-from gdbmi_interface.util import exception
+from gdbmi_interface.log import getLogger, exception, log_exceptions
 from gdbmi_interface.gdbmi.parse import GDBOutputParse, ParseError
 from gdbmi_interface.gdbmi.parse import ResultRecord, AsyncRecord, StreamRecord
 
 
-class ErrorArgumentsException(Exception): pass
-
-
-class GDBStopped(Exception): pass
-
+logger = getLogger(__name__)
 
 
 class Session(object):
-    def __init__(self, tty, logger):
+    debug, info, warn = (logger.debug, logger.info, logger.warn,)
 
-        self.tty = tty
-        self.buf = ""
+    def __init__(self, gdbmi_interface, ui):
+        self.gdbmi_interface = gdbmi_interface
+        self.ui = ui
         self.is_attached = False
 
         self.thread_groups = {}
@@ -39,16 +37,18 @@ class Session(object):
         self._hijacked = {}
 
         self.parser = GDBOutputParse()
-        self.console_output = []
         self.token = 0
-        self.last_valid_token = None
-        self.gdb_stdout_buf = []
-        self.gdb_stdout_objs = deque()
+        self.handlers = {'ResultRecord'   : self._handle_result,
+                         'AsyncRecord'    : self._handle_async,
+                         'StreamRecord'   : self._handle_stream,
+                         }
 
         self.sel = selectors.DefaultSelector()
-        self.sel.register(self.tty, selectors.EVENT_READ, self._gdb_stdout_handler)
+        self.sel.register(os.fdopen(self.gdbmi_interface, mode='wb+', buffering=0), selectors.EVENT_READ, self._gdb_stdout_handler)
         self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
         self.reader.start()
+
+        self.debug("Session launched")
 
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,
@@ -90,46 +90,33 @@ class Session(object):
                     self.error("GDBStopped")
                     return
 
-    #  @exception(logger)
+    @log_exceptions(logger)
     def _gdb_stdout_handler(self, fileobj, mask):
-        line = fileobj.readline().decode('utf8')
+        line = fileobj.readline()
         if not line:
             raise GDBStopped
         self._handle(line)
 
     def _handle(self, line):
         def _ignore(token, obj):
-            warn(["IGN:", token, obj])
+            self.warn(["IGN:", token, obj])
             return False
 
-        self.gdb_stdout_buf.append(line)
+        #  self.gdb_stdout_buf.append(line)
+        self.debug('\n'+repr(line))
         try:
-            token, obj = self.parser.parse(line)
+            token, obj = self.parser.parse(line.decode('utf8').rstrip('\r\n') + '\n')
         except ParseError as e:
             raise e
         else:
             if obj is self.parser.GDB_PROMPT:
-                token = self.last_valid_token
-                self.debug("handle token: {}, {} objs".format(token, len(self.gdb_stdout_objs)))
-                command = self.commands[token]
-                inferior_handler = command.get('handler', None)
-                event = command.get('waiting', None)
-                while self.gdb_stdout_objs:
-                    obj = self.gdb_stdout_objs.popleft()
-                    self.debug("obj {}".format(obj.What))
-                    handler = {'ResultRecord'   : self._handle_result,
-                               'AsyncRecord'    : self._handle_async,
-                               'StreamRecord'   : self._handle_stream,
-                               }.get(obj.What, _ignore)
-                    handler(token, obj)
-                    if inferior_handler is not None:
-                        inferior_handler(token, obj)
+                return
+            self.debug("obj {}".format(obj.What))
+            self.handlers.get(obj.What, _ignore)(token, obj)
+            if token:
+                event = self.commands[token].get('waiting', None)
                 if event is not None:
                     event.set()
-            else:
-                if token:
-                    self.last_valid_token = token
-                self.gdb_stdout_objs.append(obj)
 
     def _handle_result(self, token, obj):
         self.debug(obj.What)
@@ -169,29 +156,36 @@ class Session(object):
                 self._add_thread_group(obj.results)
                 return True
 
-            if obj.name == "thread-group-started":
+            elif obj.name == "thread-group-started":
                 tg = self.thread_groups[obj.results['id']]
                 tg['pid'] = obj.results['pid']
                 #  self.info(tg)
                 return True
 
-            if obj.name == "thread-created":
+            elif obj.name == "thread-created":
                 tg = self.thread_groups[obj.results['group-id']]
                 tg['threads'].add(obj.results['id'])
                 #  self.info(tg)
                 return True
 
-            if obj.name == "library-loaded":
+            elif obj.name == "library-loaded":
                 tg = self.thread_groups[obj.results['thread-group']]
                 tg['dl'][obj.results['id']] = obj.results
                 #  self.info(obj.results['id'])
                 return True
 
-            if obj.name == "breakpoint-modified":
+            elif obj.name == "breakpoint-modified":
                 self._update_breakpoint(obj.results['bkpt'])
                 return True
 
-        if obj.async_class == 'EXEC_CLASS':
+            elif obj.name == "breakpoint-created":
+                self._update_breakpoint(obj.results['bkpt'], new=True)
+                return True
+
+            elif obj.name == "breakpoint-deleted":
+                self._update_breakpoint(None, number=obj.results['id'])
+
+        elif obj.async_class == 'EXEC_CLASS':
             if obj.name == 'running':
                 self.exec_state = 'running'
                 return True
@@ -199,21 +193,19 @@ class Session(object):
             elif obj.name == 'stopped':
                 self.exec_state = 'stopped'
                 if token:
-                    command = self.commands[token]
-                    callback = command.get('exec_callback', None)
+                    callback = self.commands[token].get('exec_callback', None)
                     if callback:
                         self.debug("calling exec callback")
                         callback(frame=obj.results['frame'])
                         callback(filename=obj.results['frame']['fullname'],
                                  line=obj.results['frame']['line'])
+                self.ui.jump(obj.results['frame']['fullname'], obj.results['frame']['line'])
                 return True
 
         return False
 
     def _handle_stream(self, token, obj):
         #  self.debug(repr(obj))
-        if obj.stream_class == 'CONSOLE_OUTPUT':
-            self.console_output.append(obj.output)
         return True
 
     def _add_thread_group(self, info, group_id = None):
@@ -244,16 +236,23 @@ class Session(object):
             tmp_kwds.update(to_call)
             to_call['proc'](tmp_kwds)
 
-    def _update_breakpoint(self, info, number = None):
+    def _update_breakpoint(self, info, number = None, new=False):
         if number is None:
             number = info['number']
+        self.debug(info)
+
+        if info is None:
+            self.breakpoints.pop(number)
+            self.ui.del_breakpoint(int(number))
+            return
+
         if number in self.breakpoints:
             self.breakpoints[number].update(info)
         else:
             self.breakpoints[number] = dict(info)
 
-        self.info(['updated BREAKPOINT', self.breakpoints[number]])
-        self._callback('bkpt')
+        if new:
+            self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
 
     def wait_for(self, token):
         self.debug("waiting for {}".format(token))
@@ -383,4 +382,17 @@ class Session(object):
     def quit(self):
         self._send("-gdb-exit", self._handle)
         self.reader.join()
+
+
+class GDBStopped(Exception):
+    pass
+
+
+if __name__ == "__main__":
+    master, slave = os.openpty()
+    pty_master = master
+    slave_path = os.ttyname(slave)
+
+    session = Session(self.pty_master)
+    session.reader.join()
 
