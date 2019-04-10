@@ -23,6 +23,4 @@ execute 'sign define GdbmiCurrentLine text=' . s:pc_symbol .
 " execute 'sign define gdbsign_pcunsel text=' . s:pc_symbol .
 "     \ ' texthl=GDBUnselectedPCSign linehl=GDBUnselectedPCLine'
 
-call gdbmi#util#define_commands()
-
 command! -nargs=1 -complete=shellcmd GDBLaunch call gdbmi#init#Spawn(<q-args>)

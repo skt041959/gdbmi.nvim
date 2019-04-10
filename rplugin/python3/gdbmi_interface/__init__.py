@@ -24,6 +24,8 @@ class GDBMI_plugin():
 
     @pynvim.function('_gdbmi_start', sync=True)
     def gdbmi_start(self, args):
+        self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
+
         master, slave = os.openpty()
         self.pty_master = master
         slave_path = os.ttyname(slave)
@@ -32,17 +34,16 @@ class GDBMI_plugin():
 
         return slave_path
 
-    @pynvim.rpc_export('breakswitch', sync=False)
+    @pynvim.rpc_export('breaktoggle', sync=True)
     def breakswitch(self, args):
         filename, line = args
-        if (filename, line) in self.bp_signs:
-            self.session.do_breakdelete(filename=filename, line=line)
-            bps = self.bp_signs.pop((filename, line))
-            bps.hide()
-        else:
-            bkpt_number = self.session.do_breakinsert(filename = filename, line = line)
+        bp_id = self.session.breakpoints_status(filename, line)
 
-            self.bp_signs[(filename, line)] = BPSign(self.vim, filename=filename, line=line)
+        if bp_id:
+            return "delete {}".format(bp_id)
+        else:
+            return "break {}:{}".format(filename, line)
+
 
     @pynvim.rpc_export('exec', sync=False)
     def exec(self, args):
@@ -73,25 +74,6 @@ class GDBMI_plugin():
             self.session.do_breakinsert(filename = filename, line = line, temp=True)
             self.session.do_exec('continue',
                                  callback=functools.partial(self.vim.async_call,  fn=callback))
-
-    def _update_pc(self, frames):
-        self.debug("update pc sign")
-
-        old_pc_signs = self.pc_signs
-        self.pc_signs = {}
-
-        for f in frames:
-            filename = f.get('fullname', None)
-            if filename:
-                key = (filename, f['line'], (f['level']==0))
-                s = old_pc_signs.pop(key, None)
-                if s:
-                    self.pc_signs[key] = s
-                else:
-                    self.pc_signs[key] = PCSign(self.vim, *key)
-
-        for s in old_pc_signs.values():
-            s.hide()
 
 
 def main(vim):

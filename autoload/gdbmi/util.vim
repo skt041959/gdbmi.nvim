@@ -2,13 +2,38 @@ function! gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
-function! gdbmi#util#util_init()
+function! gdbmi#util#Init()
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
 
   let t:gdbmi_cursor_line = -1
   let t:gdbmi_cursor_sign_id = -1
 endfunction
+
+function! gdbmi#util#OnBufEnter()
+  if !exists('t:gdbmi_gdb_job_id')
+    return
+  endif
+
+  if &buftype ==# 'terminal'
+    return
+  endif
+
+  call gdbmi#keymaps#Set()
+endfunction
+
+function! gdbmi#util#OnBufLeave()
+  if !exists('t:gdbmi_gdb_job_id')
+    return
+  endif
+
+  if &buftype ==# 'terminal'
+    return
+  endif
+
+  call gdbmi#keymaps#Unset()
+endfunction
+
 
 function! gdbmi#util#jump(file, line)
   let l:window = winnr()
@@ -47,7 +72,7 @@ function! gdbmi#util#set_breakpoint_sign(id, file, line)
   exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
 endfunction
 
-function! gdbmi#util#get_selection() abort
+function! gdbmi#util#get_selection(...) range
     let [l:lnum1, l:col1] = getpos("'<")[1:2]
     let [l:lnum2, l:col2] = getpos("'>")[1:2]
     let l:lines = getline(l:lnum1, l:lnum2)
@@ -56,25 +81,18 @@ function! gdbmi#util#get_selection() abort
     return join(l:lines, "\n")
 endfunction
 
-function! s:gdbrpc(event, ...) abort
-    if !exists('g:gdbmi#_channel_id')
-        " throw '[gdbmi]: channel id not defined!'
-        GdbmiInitializePython
-    endif
-    call rpcnotify(g:gdbmi#_channel_id, a:event, a:000)
+function! gdbmi#util#rpcnotify(event, ...) abort
+  if !exists('g:gdbmi#_channel_id') | return | endif
+
+  call rpcnotify(g:gdbmi#_channel_id, a:event, a:000)
 endfunction
 
-function! gdbmi#util#define_commands() abort "{{{
-    nnoremap <silent> <Plug>GDBBreakSwitch
-                \ :call <SID>gdbrpc("breakswitch", expand("%:p"), line('.'))<CR>
+function! gdbmi#util#rpcrequest(event, ...) abort
+  if !exists('g:gdbmi#_channel_id') | return | endif
 
-    nnoremap <silent> <Plug>GDBBreakProperty
-                \ :call <SID>gdbrpc("bkpt_property", expand("%:p"), line('.'))<CR>
-
-    command!      -nargs=*    -complete=customlist,<SID>gdb_launch_complete
-                \ GDBLaunch          call <SID>gdbrpc("launchgdb", <f-args>)
-
+  return rpcrequest(g:gdbmi#_channel_id, a:event, a:000)
 endfunction
+
 "}}}
 
 

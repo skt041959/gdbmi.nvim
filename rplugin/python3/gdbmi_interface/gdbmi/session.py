@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import os
 import signal
 import pty
@@ -253,6 +251,13 @@ class Session(object):
 
         if new:
             self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
+
+    def breakpoints_status(self, filename, line):
+        for b in self.breakpoints:
+            if breakpoints['fullname'] == filename and breakpoints['line'] == line:
+                return breakpoints['number']
+        else:
+            return None
 
     def wait_for(self, token):
         self.debug("waiting for {}".format(token))
