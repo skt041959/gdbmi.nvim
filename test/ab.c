@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 
 long seqsum(long n) {
     long ret = 0;
@@ -24,6 +25,8 @@ int main () {
     printf("Enter a number:\n");
     // scanf("%ld", &a);
     a = 1000000;
+
+    raise(SIGTSTP);
 
     b = seqsum(a);
 
