@@ -30,7 +30,7 @@ function! s:DefineCommands()
   command! GDBMIFrameDown call gdbmi#Send("down")
   command! GDBMIInterrupt call gdbmi#Interrupt()
   command! GDBMIEvalWord call gdbmi#Eval(expand('<cword>'))
-  command! -range GdbEvalRange call gdbmi#Eval(gdbmi#util#get_selection(<f-args>))
+  command! -range GDBMIEvalRange call gdbmi#Eval(gdbmi#util#get_selection(<f-args>))
 endfunction
 
 function! gdbmi#init#Spawn(cmd) abort
