@@ -52,10 +52,10 @@ function! gdbmi#init#Spawn(cmd) abort
   endif
   let g:gdbmi_count += 1
 
-  let l:gdbmi_name = 'GDBMI_'.g:gdbmi_count
-  exec 'augroup '.l:gdbmi_name
+  let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
+  exec 'augroup '.t:gdbmi_buf_name
     autocmd!
-    exec 'autocmd TermClose '.l:gdbmi_name.' call gdbmi#util#teardown('.g:gdbmi_count.')'
+    exec 'autocmd TermClose '.t:gdbmi_buf_name.' call gdbmi#util#teardown('.g:gdbmi_count.')'
   augroup END
 
   let l:tty = _gdbmi_start()
@@ -64,7 +64,7 @@ function! gdbmi#init#Spawn(cmd) abort
 
   sp | wincmd j | enew | let t:gdbmi_gdb_job_id = termopen(l:cmd)
 
-  exec "file ".l:gdbmi_name
+  exec "file ".t:gdbmi_buf_name
   startinsert
 
 endfunction

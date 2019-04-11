@@ -258,9 +258,12 @@ class Session(object):
             self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
 
     def breakpoints_status(self, filename, line):
-        for b in self.breakpoints:
-            if breakpoints['fullname'] == filename and breakpoints['line'] == line:
-                return breakpoints['number']
+        self.debug(self.breakpoints)
+        self.debug(filename)
+        self.debug(line)
+        for number, bkpt in self.breakpoints.items():
+            if bkpt['fullname'] == filename and int(bkpt['line']) == int(line):
+                return number
         else:
             return None
 

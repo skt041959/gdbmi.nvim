@@ -21,8 +21,9 @@ function! gdbmi#toggle_break()
 
   let l:buf = bufnr('%')
   let l:filename = expand('#'.l:buf.':p')
+  let l:line = line('.')
 
-  let l:cmd = gdbmi#util#rpcrequest('breaktoggle', l:filename, l:buf)
+  let l:cmd = gdbmi#util#rpcrequest('breaktoggle', l:filename, l:line)
 
   call gdbmi#send(l:cmd)
 endfunction

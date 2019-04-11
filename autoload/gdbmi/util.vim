@@ -41,6 +41,9 @@ function! gdbmi#util#teardown(count)
 
   if exists('t:gdbmi_gdb_job_id')
     tabclose
+    if exists('g:gdbmi_wipeout_after_quit') && g:gdbmi_wipeout_after_quit
+      exe 'bwipeout! GDBMI_'.a:count
+    endif
   endif
 endfunction
 
@@ -93,12 +96,12 @@ function! gdbmi#util#set_cursor_sign()
 endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line)
-  let t:gdbmi_breakpoints_sign_ids = add(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
+  call add(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
   exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
 endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id)
-  let t:gdbmi_breakpoints_sign_ids = remove(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
+  call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, 5000+a:id))
   exe 'sign unplace '.(5000+a:id)
 endfunction
 
