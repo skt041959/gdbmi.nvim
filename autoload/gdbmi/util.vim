@@ -19,7 +19,7 @@ function! gdbmi#util#OnBufEnter()
     return
   endif
 
-  call gdbmi#keymaps#Set()
+  call gdbmi#keymaps#DispatchSet()
 endfunction
 
 function! gdbmi#util#OnBufLeave()
@@ -31,7 +31,7 @@ function! gdbmi#util#OnBufLeave()
     return
   endif
 
-  call gdbmi#keymaps#Unset()
+  call gdbmi#keymaps#DispatchUnset()
 endfunction
 
 

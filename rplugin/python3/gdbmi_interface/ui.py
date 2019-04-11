@@ -12,11 +12,14 @@ class UI:
     def jump(self, file, line):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump', file, line))
 
+    def jump_frame(self, frame):
+        self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump', frame['fullname'], frame['line']))
+
     def set_breakpoint(self, id, file, line):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#set_breakpoint_sign', id, file, line))
 
     def del_breakpoint(self, id):
-        self.vim.async_call(lambda : self.vim.call('gdbmi3util#del_breakpoint_sign', id))
+        self.vim.async_call(lambda : self.vim.call('gdbmi#util#del_breakpoint_sign', id))
 
 ui = UI()
 

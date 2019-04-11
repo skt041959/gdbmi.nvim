@@ -166,6 +166,9 @@ class Session(object):
                 #  self.info(tg)
                 return True
 
+            elif obj.name == "thread-selected":
+                self.ui.jump_frame(obj.results['frame'])
+
             elif obj.name == "library-loaded":
                 tg = self.thread_groups[obj.results['thread-group']]
                 tg['dl'][obj.results['id']] = obj.results
@@ -190,6 +193,8 @@ class Session(object):
 
             elif obj.name == 'stopped':
                 self.exec_state = 'stopped'
+                if 'frame' not in obj.results:
+                    return True
                 if token:
                     callback = self.commands[token].get('exec_callback', None)
                     if callback:
@@ -197,7 +202,7 @@ class Session(object):
                         callback(frame=obj.results['frame'])
                         callback(filename=obj.results['frame']['fullname'],
                                  line=obj.results['frame']['line'])
-                self.ui.jump(obj.results['frame']['fullname'], obj.results['frame']['line'])
+                self.ui.jump_frame(obj.results['frame'])
                 return True
 
         return False

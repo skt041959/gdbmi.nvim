@@ -46,8 +46,8 @@ function! gdbmi#init#Spawn(cmd) abort
 
     augroup GDBMI
       autocmd!
-      autocmd BufEnter * call gdbmi#utilOnBufEnter()
-      autocmd BufLeave * call gdbmi#utilOnBufLeave()
+      autocmd BufEnter * call gdbmi#util#OnBufEnter()
+      autocmd BufLeave * call gdbmi#util#OnBufLeave()
     augroup END
   endif
   let g:gdbmi_count += 1
