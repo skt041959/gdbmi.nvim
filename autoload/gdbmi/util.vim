@@ -8,6 +8,8 @@ function! gdbmi#util#init()
 
   let t:gdbmi_cursor_line = -1
   let t:gdbmi_cursor_sign_id = -1
+  
+  let t:gdbmi_breakpoints_sign_ids = []
 endfunction
 
 function! gdbmi#util#on_BufEnter()
@@ -36,14 +38,20 @@ endfunction
 
 function! gdbmi#util#teardown(count)
   call gdbmi#util#clear_sign()
-endfunction
-
-function! gdbmi#util#clear_sign()
-  exe 'sign unplace '.t:gdbmi_cursor_sign_id
 
   if exists('t:gdbmi_gdb_job_id')
     tabclose
   endif
+endfunction
+
+function! gdbmi#util#clear_sign()
+  if t:gdbmi_cursor_sign_id > 0
+    exe 'sign unplace '.t:gdbmi_cursor_sign_id
+  endif
+
+  for id in t:gdbmi_breakpoints_sign_ids
+    exe 'sign unplace '.id
+  endfor
 endfunction
 
 function! gdbmi#util#jump(file, line)
@@ -85,10 +93,12 @@ function! gdbmi#util#set_cursor_sign()
 endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line)
+  let t:gdbmi_breakpoints_sign_ids = add(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
   exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
 endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id)
+  let t:gdbmi_breakpoints_sign_ids = remove(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
   exe 'sign unplace '.(5000+a:id)
 endfunction
 
