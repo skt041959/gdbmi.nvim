@@ -2,7 +2,7 @@ function! gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
-function! gdbmi#util#Init()
+function! gdbmi#util#init()
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
 
@@ -10,7 +10,7 @@ function! gdbmi#util#Init()
   let t:gdbmi_cursor_sign_id = -1
 endfunction
 
-function! gdbmi#util#OnBufEnter()
+function! gdbmi#util#on_BufEnter()
   if !exists('t:gdbmi_gdb_job_id')
     return
   endif
@@ -19,10 +19,10 @@ function! gdbmi#util#OnBufEnter()
     return
   endif
 
-  call gdbmi#keymaps#DispatchSet()
+  call gdbmi#keymaps#dispatch_set()
 endfunction
 
-function! gdbmi#util#OnBufLeave()
+function! gdbmi#util#on_BufLeave()
   if !exists('t:gdbmi_gdb_job_id')
     return
   endif
@@ -31,15 +31,31 @@ function! gdbmi#util#OnBufLeave()
     return
   endif
 
-  call gdbmi#keymaps#DispatchUnset()
+  call gdbmi#keymaps#dispatch_unset()
 endfunction
 
+function! gdbmi#util#teardown(count)
+  call gdbmi#util#clear_sign()
+endfunction
+
+function! gdbmi#util#clear_sign()
+  exe 'sign unplace '.t:gdbmi_cursor_sign_id
+
+  if exists('t:gdbmi_gdb_job_id')
+    tabclose
+  endif
+endfunction
 
 function! gdbmi#util#jump(file, line)
+  if !filereadable(a:file)
+    return
+  endif
+
   let l:window = winnr()
   let l:mode = mode()
   exe t:gdbmi_win_jump_window.'wincmd w'
   let t:gdbmi_win_current_buf = bufnr('')
+
   let l:target_buf = bufnr(a:file, 1)
 
   if bufnr('%') != l:target_buf
@@ -70,6 +86,10 @@ endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line)
   exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
+endfunction
+
+function! gdbmi#util#del_breakpoint_sign(id)
+  exe 'sign unplace '.(5000+a:id)
 endfunction
 
 function! gdbmi#util#get_selection(...) range

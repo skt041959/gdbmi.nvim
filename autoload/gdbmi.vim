@@ -1,22 +1,22 @@
-function! gdbmi#SendLine(cmd)
+function! gdbmi#send_line(cmd)
   call jobsend(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
 endfunction
 
-function! gdbmi#Interrupt()
+function! gdbmi#interrupt()
   if !exists('t:gdbmi_gdb_job_id') | return | endif
   call jobsend(t:gdbmi_gdb_job_id, "\<C-c>")
 endfunction
 
-function! gdbmi#Send(cmd)
+function! gdbmi#send(cmd)
   if !exists('t:gdbmi_gdb_job_id') | return | endif
-  call gdbmi#SendLine(a:cmd)
+  call gdbmi#send_line(a:cmd)
 endfunction
 
-function! gdbmi#Eval(expr)
+function! gdbmi#eval(expr)
   call gdbmi#Send(printf('print %s', a:expr))
 endfunction
 
-function! gdbmi#ToggleBreak()
+function! gdbmi#toggle_break()
   if !exists('t:gdbmi_gdb_job_id') | return | endif
 
   let l:buf = bufnr('%')
@@ -24,5 +24,5 @@ function! gdbmi#ToggleBreak()
 
   let l:cmd = gdbmi#util#rpcrequest('breaktoggle', l:filename, l:buf)
 
-  call gdbmi#Send(l:cmd)
+  call gdbmi#send(l:cmd)
 endfunction

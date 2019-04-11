@@ -8,9 +8,8 @@ let s:default_config = {
       \ 'key_frameup':      '<leader>dU',
       \ 'key_framedown':    '<leader>dD',
       \ 'key_eval':         '<leader>de',
-      \ 'set_tkeymaps': function('gdbmi#keymaps#SetT'),
-      \ 'set_keymaps': function('gdbmi#keymaps#Set'),
-      \ 'unset_keymaps': function('gdbmi#keymaps#Unset'),
+      \ 'set_keymaps': function('gdbmi#keymaps#set'),
+      \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
 
 let s:default_keymaps = [
@@ -26,7 +25,7 @@ let s:default_keymaps = [
       \ ['v', 'key_eval',     ':GDBMIEvalRange'],
       \ ]
 
-function! gdbmi#keymaps#Set()
+function! gdbmi#keymaps#set()
   for keymap in s:default_keymaps
     if has_key(t:gdbmi_keymaps_config, keymap[1])
       let key = t:gdbmi_keymaps_config[keymap[1]]
@@ -37,7 +36,7 @@ function! gdbmi#keymaps#Set()
   endfor
 endfunction
 
-function! gdbmi#keymaps#Unset()
+function! gdbmi#keymaps#unset()
   for keymap in s:default_keymaps
     if has_key(t:gdbmi_keymaps_config, keymap[1])
       let key = t:gdbmi_keymaps_config[keymap[1]]
@@ -48,7 +47,7 @@ function! gdbmi#keymaps#Unset()
   endfor
 endfunction
 
-function! gdbmi#keymaps#Init()
+function! gdbmi#keymaps#init()
   if exists('g:gdbmi_config')
     let l:config = copy(g:gdbmi_config)
   else
@@ -69,7 +68,7 @@ function! gdbmi#keymaps#Init()
   let t:gdbmi_keymaps_config = l:config
 endfunction
 
-function! gdbmi#keymaps#DispatchSet()
+function! gdbmi#keymaps#dispatch_set()
   if !exists("t:gdbmi_keymaps_config") | return | endif
   try
     call t:gdbmi_keymaps_config['set_keymaps']()
@@ -77,7 +76,7 @@ function! gdbmi#keymaps#DispatchSet()
   endtry
 endfunction
 
-function! gdbmi#keymaps#DispatchUnset()
+function! gdbmi#keymaps#dispatch_unset()
   if !exists("t:gdbmi_keymaps_config") | return | endif
   try
     call t:gdbmi_keymaps_config['unset_keymaps']()

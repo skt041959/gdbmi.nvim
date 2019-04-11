@@ -18,46 +18,53 @@ function! s:UndefCommands()
 endfunction
 
 function! s:DefineCommands()
-  command! GDBMIDebugStop call gdbmi#Kill()
-  command! GDBMIBreakpointToggle call gdbmi#ToggleBreak()
-  command! GDBMIRun call gdbmi#Send("run")
-  command! GDBMIUntil call gdbmi#Send("until " . line('.'))
-  command! GDBMIContinue call gdbmi#Send("c")
-  command! GDBMINext call gdbmi#Send("n")
-  command! GDBMIStep call gdbmi#Send("s")
-  command! GDBMIFinish call gdbmi#Send("finish")
-  command! GDBMIFrameUp call gdbmi#Send("up")
-  command! GDBMIFrameDown call gdbmi#Send("down")
-  command! GDBMIInterrupt call gdbmi#Interrupt()
-  command! GDBMIEvalWord call gdbmi#Eval(expand('<cword>'))
-  command! -range GDBMIEvalRange call gdbmi#Eval(gdbmi#util#get_selection(<f-args>))
+  command! GDBMIDebugStop call gdbmi#kill()
+  command! GDBMIBreakpointToggle call gdbmi#toggle_break()
+  command! GDBMIRun call gdbmi#send('run')
+  command! GDBMIUntil call gdbmi#send('until ' . line('.'))
+  command! GDBMIContinue call gdbmi#send('c')
+  command! GDBMINext call gdbmi#send('n')
+  command! GDBMIStep call gdbmi#send('s')
+  command! GDBMIFinish call gdbmi#send('finish')
+  command! GDBMIFrameUp call gdbmi#send('up')
+  command! GDBMIFrameDown call gdbmi#send('down')
+  command! GDBMIInterrupt call gdbmi#interrupt()
+  command! GDBMIEvalWord call gdbmi#eval(expand('<cword>'))
+  command! -range GDBMIEvalRange call gdbmi#eval(gdbmi#util#get_selection(<f-args>))
 endfunction
 
 function! gdbmi#init#Spawn(cmd) abort
 
   sp | wincmd T
 
-  call gdbmi#util#Init()
+  call gdbmi#util#init()
 
-  call gdbmi#keymaps#Init()
+  call gdbmi#keymaps#init()
 
   if !g:gdbmi_count
     call s:DefineCommands()
 
     augroup GDBMI
       autocmd!
-      autocmd BufEnter * call gdbmi#util#OnBufEnter()
-      autocmd BufLeave * call gdbmi#util#OnBufLeave()
+      autocmd BufEnter * call gdbmi#util#on_BufEnter()
+      autocmd BufLeave * call gdbmi#util#on_BufLeave()
     augroup END
   endif
   let g:gdbmi_count += 1
 
+  let l:gdbmi_name = 'GDBMI_'.g:gdbmi_count
+  exec 'augroup '.l:gdbmi_name
+    autocmd!
+    exec 'autocmd TermClose '.l:gdbmi_name.' call gdbmi#util#teardown('.g:gdbmi_count.')'
+  augroup END
+
   let l:tty = _gdbmi_start()
 
-  let l:cmd = a:cmd .' -ex "new-ui mi '. l:tty .'"'
+  let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
 
   sp | wincmd j | enew | let t:gdbmi_gdb_job_id = termopen(l:cmd)
 
+  exec "file ".l:gdbmi_name
   startinsert
 
 endfunction
