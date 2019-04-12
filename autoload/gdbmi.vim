@@ -13,7 +13,7 @@ function! gdbmi#send(cmd)
 endfunction
 
 function! gdbmi#eval(expr)
-  call gdbmi#Send(printf('print %s', a:expr))
+  call gdbmi#send(printf('print %s', a:expr))
 endfunction
 
 function! gdbmi#toggle_break()

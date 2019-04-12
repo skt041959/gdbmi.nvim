@@ -16,11 +16,7 @@ class GDBMI_plugin():
         self.vim = vim
         ui.setVim(vim)
 
-        self.panels = []
-
         self.session = None
-        self.bp_signs = {}
-        self.pc_signs = {}
 
     @pynvim.function('_gdbmi_start', sync=True)
     def gdbmi_start(self, args):
