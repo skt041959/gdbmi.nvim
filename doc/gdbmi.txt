@@ -1,0 +1,40 @@
+                  GDBMI, gdb remote plugin for neovim           *GDBMI* *gdbmi*
+================================================================================
+CONTENTS                                                                *Gdbmi*
+        1. Introduction ...................................|GDBMI_Introduction|
+        2. Usage .................................................|GDBMI_Usage|
+        3. Commands ...........................................|GDBMI_Commands|
+        4. Mappings ...........................................|GDBMI_Mappings|
+        5. Configuration .................................|GDBMI_Configuration|
+
+================================================================================
+1. Introduction                                            *GDBMI_Introduction*
+
+This plugin use the power of neovim remote plugin and gdb's new-ui.  The new-ui
+command requires gdb version be 7.12+.  This plugin will create a pseudo tty in
+Python client to connect to gdb's second interface.  Currently, it doesn't
+support Native Python executable in Windows system, which don't have `os.openpty`.
+You can use MingW Python or use Cygwin environment.
+
+================================================================================
+2. Usage                                                          *GDBMI_Usage*
+
+The debugging session can be started with: >
+
+    :GDBMILaunch gdb <gdb-args>
+
+This will open a new tab with debugging view. All gdb arguments will be passed
+directly to gdb.
+
+================================================================================
+3. Commands                                                    *GDBMI_Commands*
+
+:GDBMILaunch [command]    Start debugging session with the give gdb arguments.
+
+:GDBMIBreakpointToggle    Toggle the breakpoint at the cursor position.
+
+================================================================================
+4. Mappings                                                    *GDBMI_Mappings*
+
+================================================================================
+5. Configuration                                          *GDBMI_Configuration*

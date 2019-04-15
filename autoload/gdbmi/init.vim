@@ -1,20 +1,18 @@
 let g:gdbmi_count = 0
 
 function! s:UndefCommands()
-  delcommand GdbDebugStop
-  delcommand GdbBreakpointToggle
-  delcommand GdbBreakpointClearAll
-  delcommand GdbRun
-  delcommand GdbUntil
-  delcommand GdbContinue
-  delcommand GdbNext
-  delcommand GdbStep
-  delcommand GdbFinish
-  delcommand GdbFrameUp
-  delcommand GdbFrameDown
-  delcommand GdbInterrupt
-  delcommand GdbEvalWord
-  delcommand GdbEvalRange
+  delcommand GDBMIDebugStop
+  delcommand GDBMIBreakpointToggle
+  delcommand GDBMIRun
+  delcommand GDBMIUntil
+  delcommand GDBMIContinue
+  delcommand GDBMINext
+  delcommand GDBMIStep
+  delcommand GDBMIFinish
+  delcommand GDBMIFrameUp
+  delcommand GDBMIFrameDown
+  delcommand GDBMIInterrupt
+  delcommand GDBMIEvalWord
 endfunction
 
 function! s:DefineCommands()
@@ -55,7 +53,7 @@ function! gdbmi#init#Spawn(cmd) abort
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
   exec 'augroup '.t:gdbmi_buf_name
     autocmd!
-    exec 'autocmd TermClose '.t:gdbmi_buf_name.' call gdbmi#util#teardown('.g:gdbmi_count.')'
+    exec 'autocmd TermClose '.t:gdbmi_buf_name.' call gdbmi#init#teardown('.g:gdbmi_count.')'
   augroup END
 
   let l:tty = _gdbmi_start()
@@ -68,3 +66,18 @@ function! gdbmi#init#Spawn(cmd) abort
   startinsert
 
 endfunction
+
+function! gdbmi#init#teardown(count)
+
+  call gdbmi#util#clear_sign()
+
+  call s:UndefCommands()
+
+  if exists('t:gdbmi_gdb_job_id')
+    tabclose
+    if exists('g:gdbmi_delete_after_quit') && g:gdbmi_delete_after_quit
+      exe 'bdelete! GDBMI_'.a:count
+    endif
+  endif
+endfunction
+

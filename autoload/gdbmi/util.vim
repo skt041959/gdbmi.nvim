@@ -36,17 +36,6 @@ function! gdbmi#util#on_BufLeave()
   call gdbmi#keymaps#dispatch_unset()
 endfunction
 
-function! gdbmi#util#teardown(count)
-  call gdbmi#util#clear_sign()
-
-  if exists('t:gdbmi_gdb_job_id')
-    tabclose
-    if exists('g:gdbmi_wipeout_after_quit') && g:gdbmi_wipeout_after_quit
-      exe 'bwipeout! GDBMI_'.a:count
-    endif
-  endif
-endfunction
-
 function! gdbmi#util#clear_sign()
   if t:gdbmi_cursor_sign_id > 0
     exe 'sign unplace '.t:gdbmi_cursor_sign_id
