@@ -10,6 +10,6 @@ This is a plugin for neovim to integrate with GDB. The project is under heavy de
 
 
 ## todo
-[x] keymap
-[x] line hint
-[ ] show locals in float window
+- [x] keymap
+- [x] line hint
+- [ ] show locals in float window
