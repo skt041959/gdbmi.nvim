@@ -1,86 +1,46 @@
-import os
-import functools
-import tempfile
 
-import pynvim
+from importlib.util import find_spec
 
-from gdbmi_interface.gdbmi import Session
-from gdbmi_interface.ui import ui
+from gdbmi_interface.rplugin import GDBMI_rplugin
 
+if find_spec('yarp'):
+    import vim
+elif find_spec('pynvim'):
+    import pynvim
+    vim = pynvim
+else:
+    import neovim
+    vim = neovim
 
-@pynvim.plugin
-class GDBMI_plugin():
+if hasattr(vim, 'plugin'):
 
-    def __init__(self, vim):
+    @vim.plugin
+    class plugin():
 
-        self.vim = vim
-        ui.setVim(vim)
+        def __init__(self, vim):
+            self.rplugin = GDBMI_rplugin(vim)
 
-        self.session = None
+        @vim.function('_gdbmi_start', sync=True)
+        def gdbmi_start(self, args):
+            return self.rplugin.gdbmi_start(args)
 
-    @pynvim.function('_gdbmi_start', sync=True)
-    def gdbmi_start(self, args):
-        self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
+        @vim.rpc_export('breaktoggle', sync=True)
+        def breakswitch(self, args):
+            return self.rplugin.breakswitch(args)
 
-        master, slave = os.openpty()
-        self.pty_master = master
-        slave_path = os.ttyname(slave)
+        @vim.rpc_export('gdbmi_exec', sync=False)
+        def exec(self, args):
+            self.rplugin.exec(args)
 
-        self.session = Session(self.pty_master, ui)
+if find_spec('yarp'):
 
-        return slave_path
+    gdbmi = GDBMI_rplugin(vim)
 
-    @pynvim.rpc_export('breaktoggle', sync=True)
-    def breakswitch(self, args):
-        filename, line = args
-        bp_id = self.session.breakpoints_status(filename, line)
+    def _gdbmi_start(args):
+        gdbmi.gdbmi_start(args)
 
-        if bp_id:
-            return "delete {}".format(bp_id)
-        else:
-            return "break {}:{}".format(filename, line)
+    def breaktoggle(args):
+        return gdbmi.breakswitch(args)
 
-
-    @pynvim.rpc_export('exec', sync=False)
-    def exec(self, args):
-        def callback(**kwargs):
-            frame = kwargs.pop("frame", None)
-            if frame is not None:
-                filename = frame.get('fullname', None)
-                if filename:
-                    line = frame['line']
-                    self.debug("exec callback")
-                    self.vim.command('buffer +{} {}'.format(line, filename))
-
-            error = kwargs.pop("error", None)
-            if error is not None:
-                msg = error['msg']
-                self.vim.err_write(msg + '\n')
-
-        if args[0] in ('run', 'next', 'step', 'continue', 'finish',
-                       'next-instruction', 'step-instruction'):
-            self.session.do_exec(args[0], *args[1:],
-                                 callback=functools.partial(self.vim.async_call,  fn=callback))
-
-        if args[0] is 'interrupt':
-            self.session.inferior_interrupt()
-
-        if args[0] is 'runtocursor':
-            filename, line = args
-            self.session.do_breakinsert(filename = filename, line = line, temp=True)
-            self.session.do_exec('continue',
-                                 callback=functools.partial(self.vim.async_call,  fn=callback))
-
-
-def main(vim):
-    plugin_instance = GDBMI_plugin(vim)
-
-    print(plugin_instance.gdbmi_start(None))
-
-    plugin_instance.session.reader.join()
-
-
-if __name__ == "__main__":
-    import sys
-    main(sys.argv[1])
-
+    def gdbmi_exec(args):
+        gdbmi.exec(args)

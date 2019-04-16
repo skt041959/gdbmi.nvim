@@ -2,6 +2,10 @@ function! gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
+function! gdbmi#util#has_yarp()
+  return !has('nvim')
+endfunction
+
 function! gdbmi#util#init()
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
@@ -104,15 +108,15 @@ function! gdbmi#util#get_selection(...) range
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort
-  if !exists('g:gdbmi#_channel_id') | return | endif
+  if !exists('t:gdbmi#_channel_id') | return | endif
 
-  call rpcnotify(g:gdbmi#_channel_id, a:event, a:000)
+  call rpcnotify(t:gdbmi#_channel_id, a:event, a:000)
 endfunction
 
 function! gdbmi#util#rpcrequest(event, ...) abort
-  if !exists('g:gdbmi#_channel_id') | return | endif
+  if !exists('t:gdbmi#_channel_id') | return | endif
 
-  return rpcrequest(g:gdbmi#_channel_id, a:event, a:000)
+  return rpcrequest(t:gdbmi#_channel_id, a:event, a:000)
 endfunction
 
 "}}}

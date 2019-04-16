@@ -1,8 +1,7 @@
 
-if exists('g:loaded_gdbmi') || !has('nvim') || !has('python')
+if exists('g:loaded_gdbmi')
     finish
 endif
-
 let g:loaded_gdbmi = 1
 
 let s:bp_symbol = get(g:, 'gdbmi#sign#bp_symbol', 'B>')
