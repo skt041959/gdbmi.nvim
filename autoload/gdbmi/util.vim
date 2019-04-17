@@ -98,7 +98,7 @@ function! gdbmi#util#del_breakpoint_sign(id)
   exe 'sign unplace '.(5000+a:id)
 endfunction
 
-function! gdbmi#util#get_selection(...) range
+function! gdbmi#util#get_selection(...)
     let [l:lnum1, l:col1] = getpos("'<")[1:2]
     let [l:lnum2, l:col2] = getpos("'>")[1:2]
     let l:lines = getline(l:lnum1, l:lnum2)
@@ -108,15 +108,15 @@ function! gdbmi#util#get_selection(...) range
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort
-  if !exists('t:gdbmi#_channel_id') | return | endif
+  if !exists('t:gdbmi_channel_id') | return | endif
 
-  call rpcnotify(t:gdbmi#_channel_id, a:event, a:000)
+  call rpcnotify(t:gdbmi_channel_id, a:event, a:000)
 endfunction
 
 function! gdbmi#util#rpcrequest(event, ...) abort
-  if !exists('t:gdbmi#_channel_id') | return | endif
+  if !exists('t:gdbmi_channel_id') | return | endif
 
-  return rpcrequest(t:gdbmi#_channel_id, a:event, a:000)
+  return rpcrequest(t:gdbmi_channel_id, a:event, a:000)
 endfunction
 
 "}}}

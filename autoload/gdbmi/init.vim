@@ -13,6 +13,7 @@ function! s:UndefCommands()
   delcommand GDBMIFrameDown
   delcommand GDBMIInterrupt
   delcommand GDBMIEvalWord
+  delcommand GDBMIDisplay
 endfunction
 
 function! s:DefineCommands()
@@ -28,7 +29,12 @@ function! s:DefineCommands()
   command! GDBMIFrameDown call gdbmi#send('down')
   command! GDBMIInterrupt call gdbmi#interrupt()
   command! GDBMIEvalWord call gdbmi#eval(expand('<cword>'))
+  command! GDBMIDisplayWord call gdbmi#display(expand('<cword>'))
+
   command! -range GDBMIEvalRange call gdbmi#eval(gdbmi#util#get_selection(<f-args>))
+  command! -range GDBMIDisplayRange call gdbmi#display(gdbmi#util#get_selection(<f-args>))
+
+  command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
 endfunction
 
 function! gdbmi#init#Spawn(cmd) abort
@@ -74,9 +80,11 @@ function! gdbmi#init#Spawn(cmd) abort
     if gdbmi#util#has_yarp()
       let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
       let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
-      let t:gdbmi#_channel_id = 1
+      let g:gdbmi#_channel_id = 1
+      let t:gdbmi_channel_id = g:gdbmi#_channel_id
     else
       let l:tty = _gdbmi_start()
+      let t:gdbmi_channel_id = g:gdbmi#_channel_id
     endif
   " catch
   "   if gdbmi#util#has_yarp()

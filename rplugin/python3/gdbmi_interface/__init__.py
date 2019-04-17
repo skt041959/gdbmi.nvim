@@ -18,19 +18,25 @@ if hasattr(vim, 'plugin'):
     class plugin():
 
         def __init__(self, vim):
+            self.vim = vim
+            self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
             self.rplugin = GDBMI_rplugin(vim)
 
         @vim.function('_gdbmi_start', sync=True)
         def gdbmi_start(self, args):
             return self.rplugin.gdbmi_start(args)
 
-        @vim.rpc_export('breaktoggle', sync=True)
+        @vim.rpc_export('gdbmi_breaktoggle', sync=True)
         def breakswitch(self, args):
             return self.rplugin.breakswitch(args)
 
         @vim.rpc_export('gdbmi_exec', sync=False)
         def exec(self, args):
             self.rplugin.exec(args)
+
+        @vim.rpc_export('gdbmi_display', sync=False)
+        def display(self, args):
+            self.rplugin.display(args)
 
 if find_spec('yarp'):
 

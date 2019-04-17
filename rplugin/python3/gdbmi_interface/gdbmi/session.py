@@ -32,7 +32,7 @@ class Session(object):
 
         self.commands = {}
         self._callbacks = {}
-        self._hijacked = {}
+        self._display_exprs = []
 
         self.parser = GDBOutputParse()
         self.token = 0
@@ -42,9 +42,10 @@ class Session(object):
                          }
 
         self.sel = selectors.DefaultSelector()
-        self.sel.register(os.fdopen(self.gdbmi_interface, mode='wb+', buffering=0), selectors.EVENT_READ, self._gdb_stdout_handler)
-        self.reader = Thread(target=self._read, name="reader", args=(self.sel,))
-        self.reader.start()
+        self.gdbmi_f = os.fdopen(self.gdbmi_interface, mode='wb+', buffering=0)
+        self.sel.register(self.gdbmi_f, selectors.EVENT_READ, self._gdb_stdout_handler)
+        self.conn = Thread(target=self._read, name="conn", args=(self.sel,))
+        self.conn.start()
 
         self.debug("Session launched")
 
@@ -57,7 +58,7 @@ class Session(object):
                           '--nw', # ignore .gdbinit
                           '--interpreter=mi2', # use GDB/MI v2
                           #'--write', # to-do: allow to modify executable/cores?
-                          self.debuggee,
+                          debuggee,
                           ],
                   stdin = PIPE,
                   stdout = PIPE,
@@ -74,7 +75,8 @@ class Session(object):
         self.commands[token].update(kwargs)
 
         buf = token + cmd + "\n"
-        self.process.stdin.write(buf.encode('utf8'))
+        #  self.process.stdin.write(buf.encode('utf8'))
+        self.gdbmi_f.write(buf.encode('utf8'))
 
         return token
 
@@ -107,7 +109,7 @@ class Session(object):
         except ParseError as e:
             raise e
         else:
-            if obj is self.parser.GDB_PROMPT:
+            if obj is None or obj is self.parser.GDB_PROMPT:
                 return
             self.debug("obj {}".format(obj.What))
             self.handlers.get(obj.What, _ignore)(token, obj)
@@ -117,38 +119,29 @@ class Session(object):
                     event.set()
 
     def _handle_result(self, token, obj):
-        self.debug(obj.What)
-        handled = False
-        if obj.result_class == "done" or obj.result_class == "running":
-            if token:
-                command = self.commands[token]
+        self.debug("handle result")
+        if token is None:
+            return False
 
-            if 'bkpt' in obj.results:
-                self._update_breakpoint(obj.results['bkpt'])
-            if command:
-                command['state'] = obj.What
-                callback = command.get('result_callback', None)
-                if callback:
-                    callback(obj)
+        command = self.commands[token]
+        try:
+            command['state'] = obj.What
+            callback = command.get('result_callback', None)
+            if callback:
+                callback(obj)
+        except:
+            pass
 
-            handled = True
+        if obj.result_class == "done":
+            pass
+        elif obj.result_class == "running":
+            pass
         elif obj.result_class == "error":
-            if token:
-                command = self.commands[token]
-
-            if 'bkpt' in obj.results:
-                self._update_breakpoint(obj.results['bkpt'])
-            if command:
-                command['state'] = obj.What
-                callback = command.get('result_callback', None)
-                if callback:
-                    callback(obj)
-
-            handled = True
-        return handled
+            pass
+        return True
 
     def _handle_async(self, token, obj, **kwargs):
-        self.debug(obj.What)
+        self.debug("handle async")
         if obj.async_class == "NOTIFY_CLASS":
             if obj.name == "thread-group-added":
                 self._add_thread_group(obj.results)
@@ -203,6 +196,7 @@ class Session(object):
                         callback(filename=obj.results['frame']['fullname'],
                                  line=obj.results['frame']['line'])
                 self.ui.jump_frame(obj.results['frame'])
+                self._query_display()
                 return True
 
         return False
@@ -231,6 +225,9 @@ class Session(object):
         }
         self._callbacks.setdefault(target, []).append(to_add)
 
+    def add_display(self, expr):
+        self._display_exprs.append(expr)
+
     def _callback(self, target, **kwds):
         for to_call in self._callbacks.get(target, []):
             if ('filter' in to_call) and (not to_call['filter'](kwds)):
@@ -258,9 +255,6 @@ class Session(object):
             self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
 
     def breakpoints_status(self, filename, line):
-        self.debug(self.breakpoints)
-        self.debug(filename)
-        self.debug(line)
         for number, bkpt in self.breakpoints.items():
             if bkpt['fullname'] == filename and int(bkpt['line']) == int(line):
                 return number
@@ -389,12 +383,19 @@ class Session(object):
 
         return breakpoints
 
+    def _query_display(self):
+        self._query_display_expr()
+
+    def _query_display_expr(self):
+        for expr in self._display_exprs:
+            self._send('-data-evaluate-expression {}'.format(expr))
+
     def send_cmd(self, cmd):
         token = self._send(cmd, self._handle)
 
     def quit(self):
         self._send("-gdb-exit", self._handle)
-        self.reader.join()
+        self.conn.join()
 
 
 class GDBStopped(Exception):
@@ -406,6 +407,6 @@ if __name__ == "__main__":
     pty_master = master
     slave_path = os.ttyname(slave)
 
-    session = Session(self.pty_master)
-    session.reader.join()
+    session = Session(pty_master)
+    session.conn.join()
 

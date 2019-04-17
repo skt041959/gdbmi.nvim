@@ -8,6 +8,7 @@ let s:default_config = {
       \ 'key_frameup':      '<leader>dU',
       \ 'key_framedown':    '<leader>dD',
       \ 'key_eval':         '<leader>de',
+      \ 'key_ui_display':   '<leader>dw',
       \ 'set_keymaps': function('gdbmi#keymaps#set'),
       \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
@@ -22,7 +23,9 @@ let s:default_keymaps = [
       \ ['n', 'key_frameup',  ':GDBMIFramup'],
       \ ['n', 'key_framedown',':GDBMIFramdown'],
       \ ['n', 'key_eval',     ':GDBMIEvalWord'],
+      \ ['n', 'key_ui_display',':GDBMIDisplayWord'],
       \ ['v', 'key_eval',     ':GDBMIEvalRange'],
+      \ ['v', 'key_ui_display',':GDBMIDisplayRange'],
       \ ]
 
 function! gdbmi#keymaps#set()

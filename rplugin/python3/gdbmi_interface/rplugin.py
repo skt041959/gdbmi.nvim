@@ -12,8 +12,6 @@ class GDBMI_rplugin():
         self.Session = None
 
     def gdbmi_start(self, args):
-        self.vim.current.tabpage.vars['gdbmi#_channel_id'] = self.vim.channel_id
-
         master, slave = os.openpty()
         self.pty_master = master
         slave_path = os.ttyname(slave)
@@ -30,6 +28,10 @@ class GDBMI_rplugin():
             return "delete {}".format(bp_id)
         else:
             return "break {}:{}".format(filename, line)
+
+    def display(self, args):
+        expr = args[0]
+        self.session.add_display(expr)
 
     def exec(self, args):
         def callback(**kwargs):

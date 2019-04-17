@@ -22,5 +22,8 @@ class UI:
     def del_breakpoint(self, id):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#del_breakpoint_sign', id))
 
+    def display(self, context):
+        self.vim.async_call(lambda: self.vim.call('gdbmi#display#display'), context)
+
 ui = UI()
 
