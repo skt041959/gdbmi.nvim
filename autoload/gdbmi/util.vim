@@ -2,11 +2,11 @@ function! gdbmi#util#print_error(msg) abort
     echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
-function! gdbmi#util#has_yarp()
+function! gdbmi#util#has_yarp() abort
   return !has('nvim')
 endfunction
 
-function! gdbmi#util#init()
+function! gdbmi#util#init() abort
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
 
@@ -16,7 +16,7 @@ function! gdbmi#util#init()
   let t:gdbmi_breakpoints_sign_ids = []
 endfunction
 
-function! gdbmi#util#on_BufEnter()
+function! gdbmi#util#on_BufEnter() abort
   if !exists('t:gdbmi_gdb_job_id')
     return
   endif
@@ -28,7 +28,7 @@ function! gdbmi#util#on_BufEnter()
   call gdbmi#keymaps#dispatch_set()
 endfunction
 
-function! gdbmi#util#on_BufLeave()
+function! gdbmi#util#on_BufLeave() abort
   if !exists('t:gdbmi_gdb_job_id')
     return
   endif
@@ -40,7 +40,7 @@ function! gdbmi#util#on_BufLeave()
   call gdbmi#keymaps#dispatch_unset()
 endfunction
 
-function! gdbmi#util#clear_sign()
+function! gdbmi#util#clear_sign() abort
   if t:gdbmi_cursor_sign_id > 0
     exe 'sign unplace '.t:gdbmi_cursor_sign_id
   endif
@@ -50,15 +50,15 @@ function! gdbmi#util#clear_sign()
   endfor
 endfunction
 
-function! gdbmi#util#jump(file, line)
+function! gdbmi#util#jump(file, line, cursor) abort
   if !filereadable(a:file)
-    return
+    return 0
   endif
 
   let l:window = winnr()
   let l:mode = mode()
   exe t:gdbmi_win_jump_window.'wincmd w'
-  let t:gdbmi_win_current_buf = bufnr('')
+  let t:gdbmi_win_current_buf = bufnr('%')
 
   let l:target_buf = bufnr(a:file, 1)
 
@@ -70,13 +70,16 @@ function! gdbmi#util#jump(file, line)
   exe 'normal! '.a:line.'G'
   let t:gdbmi_new_cursor_line = a:line
   exe l:window.'wincmd w'
-  call gdbmi#util#set_cursor_sign()
   if l:mode ==? 't' || l:mode ==? 'i'
     startinsert
   endif
+
+  if a:cursor
+    call gdbmi#util#set_cursor_sign()
+  endif
 endfunction
 
-function! gdbmi#util#set_cursor_sign()
+function! gdbmi#util#set_cursor_sign() abort
   let l:old = t:gdbmi_cursor_sign_id
   let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
   let l:current_buf = t:gdbmi_win_current_buf
@@ -88,17 +91,18 @@ function! gdbmi#util#set_cursor_sign()
   endif
 endfunction
 
-function! gdbmi#util#set_breakpoint_sign(id, file, line)
+function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
+  let l:buf = gdbmi#util#jump(a:file, a:line, 0)
   call add(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
   exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
 endfunction
 
-function! gdbmi#util#del_breakpoint_sign(id)
+function! gdbmi#util#del_breakpoint_sign(id) abort
   call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, 5000+a:id))
   exe 'sign unplace '.(5000+a:id)
 endfunction
 
-function! gdbmi#util#get_selection(...)
+function! gdbmi#util#get_selection(...) abort
     let [l:lnum1, l:col1] = getpos("'<")[1:2]
     let [l:lnum2, l:col2] = getpos("'>")[1:2]
     let l:lines = getline(l:lnum1, l:lnum2)
