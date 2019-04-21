@@ -11,7 +11,7 @@ class GDBMI_rplugin():
 
         self.Session = None
 
-    def gdbmi_start(self, args):
+    def gdbmi_start(self):
         master, slave = os.openpty()
         self.pty_master = master
         slave_path = os.ttyname(slave)
