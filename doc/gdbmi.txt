@@ -29,12 +29,19 @@ directly to gdb.
 ================================================================================
 3. Commands                                                    *GDBMI_Commands*
 
+                                                                *:GDBMILaunch*
 :GDBMILaunch [command]    Start debugging session with the give gdb arguments.
 
+                                                        *GDBMIBreakpointToggle*
 :GDBMIBreakpointToggle    Toggle the breakpoint at the cursor position.
 
 ================================================================================
 4. Mappings                                                    *GDBMI_Mappings*
+
+When debugging session has started, the following mappings are defined in the tab
+page with gdb terminal:
+
+<leader>db      Toggle breakpoint           :GDBMIBreakpointToggle
 
 ================================================================================
 5. Configuration                                          *GDBMI_Configuration*
