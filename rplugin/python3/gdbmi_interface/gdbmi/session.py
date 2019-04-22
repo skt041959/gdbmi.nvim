@@ -256,7 +256,7 @@ class Session(object):
 
     def breakpoints_status(self, filename, line):
         for number, bkpt in self.breakpoints.items():
-            if bkpt['fullname'] == filename and int(bkpt['line']) == int(line):
+            if bkpt['type'] == 'breakpoint' and int(bkpt['line']) == int(line) and bkpt['fullname'] == filename:
                 return number
         else:
             return None

@@ -63,7 +63,7 @@ function! gdbmi#util#jump(file, line, cursor) abort
   let l:target_buf = bufnr(a:file, 1)
 
   if bufnr('%') != l:target_buf
-    exe 'noswapfile buffer ' l:target_buf
+    exe 'buffer '. l:target_buf
     let t:gdbmi_win_current_buf = l:target_buf
   endif
 
