@@ -70,14 +70,15 @@ function! gdbmi#init#Spawn(cmd) abort
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
-  exec 'augroup '.t:gdbmi_buf_name
-    autocmd!
-    if exists('#TermClose')
-      exec 'autocmd TermClose '.t:gdbmi_buf_name.' call gdbmi#init#teardown('.g:gdbmi_count.')'
-    else
-      exec 'autocmd BufDelete '.t:gdbmi_buf_name.' call gdbmi#init#teardown('.g:gdbmi_count.')'
-    endif
-  augroup END
+  autocmd! t:gdbmi_buf_name
+  if exists('#TermClose')
+    let l:autocmd = printf("autocmd %s TermClose %s call gdbmi#init#teardown(%d)",
+          \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
+  else
+    let l:autocmd = printf("autocmd %s BufDelete %s call gdbmi#init#teardown(%d)",
+          \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
+  endif
+  exec l:autocmd
 
   try
     if gdbmi#util#has_yarp()
@@ -126,8 +127,11 @@ function! gdbmi#init#teardown(count)
 
   call gdbmi#util#clear_sign()
 
+  let l:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_buf_name
+
   if !g:gdbmi_count
     call s:UndefCommands()
+    autocmd! l:gdbmi_buf_name
   endif
 
   if exists('t:gdbmi_gdb_job_id')
