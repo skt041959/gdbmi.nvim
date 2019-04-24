@@ -32,7 +32,7 @@ class Session(object):
 
         self.commands = {}
         self._callbacks = {}
-        self._display_exprs = []
+        self._display_exprs = {}
 
         self.parser = GDBOutputParse()
         self.token = 0
@@ -226,7 +226,7 @@ class Session(object):
         self._callbacks.setdefault(target, []).append(to_add)
 
     def add_display(self, expr):
-        self._display_exprs.append(expr)
+        self._display_exprs[expr] = []
 
     def _callback(self, target, **kwds):
         for to_call in self._callbacks.get(target, []):
@@ -387,8 +387,8 @@ class Session(object):
         self._query_display_expr()
 
     def _query_display_expr(self):
-        for expr in self._display_exprs:
-            self._send('-data-evaluate-expression {}'.format(expr))
+        for expr in self._display_exprs.keys():
+            self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
 
     def send_cmd(self, cmd):
         token = self._send(cmd, self._handle)

@@ -58,6 +58,8 @@ function! gdbmi#init#Spawn(cmd) abort
 
   call gdbmi#keymaps#init()
 
+  call gdbmi#display#init()
+
   if !g:gdbmi_count
     call s:DefineCommands()
 
@@ -70,7 +72,8 @@ function! gdbmi#init#Spawn(cmd) abort
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
-  autocmd! t:gdbmi_buf_name
+  exe "augroup ". t:gdbmi_buf_name . " | augroup END"
+  exe "autocmd! ". t:gdbmi_buf_name
   if exists('#TermClose')
     let l:autocmd = printf("autocmd %s TermClose %s call gdbmi#init#teardown(%d)",
           \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)

@@ -89,6 +89,9 @@ function! gdbmi#util#set_cursor_sign() abort
   if l:old != -1
     exe 'sign unplace '.l:old
   endif
+
+  " FIXME: not been redrawed in nvim-0.4 nightly build
+  redraw
 endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
