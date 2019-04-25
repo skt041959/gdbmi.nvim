@@ -251,7 +251,7 @@ class Session(object):
         else:
             self.breakpoints[number] = dict(info)
 
-        if new:
+        if new and 'fullname' in info:
             self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
 
     def breakpoints_status(self, filename, line):
