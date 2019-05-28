@@ -6,9 +6,6 @@ class UI:
     def setVim(self, vim):
         self.vim = vim
 
-    #  def __init__(self, vim, win, cursor, client, breakpoint, keymaps):
-    #      self.vim = vim
-
     def jump(self, file, line):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump', file, line))
 
@@ -21,6 +18,9 @@ class UI:
 
     def del_breakpoint(self, id):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#del_breakpoint_sign', id))
+
+    def del_cursor(self, thread_group_id):
+        pass
 
     def display(self, context):
         self.vim.async_call(lambda: self.vim.call('gdbmi#display#display'), context)

@@ -22,7 +22,7 @@ You can use MingW Python or use Cygwin environment.
 The debugging session can be started with: >
 
     :GDBMILaunch gdb <gdb-args>
-
+<
 This will open a new tab with debugging view. All gdb arguments will be passed
 directly to gdb.
 
@@ -38,10 +38,18 @@ directly to gdb.
 ================================================================================
 4. Mappings                                                    *GDBMI_Mappings*
 
-When debugging session has started, the following mappings are defined in the tab
-page with gdb terminal:
+When debugging session has started, the following mappings are defined in the
+tab page with gdb terminal:
 
 <leader>db      Toggle breakpoint           :GDBMIBreakpointToggle
 
 ================================================================================
 5. Configuration                                          *GDBMI_Configuration*
+
+                                                      *g:gdbmi_split_direction*
+Specify how to split and open terminal for gdb.
+    "horizontal": open gdb terminal in horizontal split
+    "vertical"  : open gdb terminal in vertical split
+
+================================================================================
+vim: tw=78

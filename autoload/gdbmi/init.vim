@@ -25,8 +25,8 @@ function! s:DefineCommands()
   command! GDBMINext call gdbmi#send('n')
   command! GDBMIStep call gdbmi#send('s')
   command! GDBMIFinish call gdbmi#send('finish')
-  command! GDBMIFrameUp call gdbmi#send('up')
-  command! GDBMIFrameDown call gdbmi#send('down')
+  command! GDBMIFrameUp call gdbmi#navigate('up')
+  command! GDBMIFrameDown call gdbmi#navigate('down')
   command! GDBMIInterrupt call gdbmi#interrupt()
   command! GDBMIEvalWord call gdbmi#eval(expand('<cword>'))
   command! GDBMIDisplayWord call gdbmi#display(expand('<cword>'))
@@ -115,22 +115,25 @@ function! gdbmi#init#Spawn(cmd) abort
   let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
 
   sp | wincmd j | enew
+  if exists('g:gdbmi_split_direction') && g:gdbmi_split_direction == 'vertical'
+    wincmd L
+  endif
+
   if has('nvim')
     let t:gdbmi_gdb_job_id = termopen(l:cmd)
   else
     let t:gdbmi_gdb_job_id = term_start(l:cmd, {'curwin': 1})
   endif
 
-  exec "file " . t:gdbmi_buf_name
-  startinsert
-
+  exec 'file '. t:gdbmi_buf_name
+  exec 'startinsert'
 endfunction
 
 function! gdbmi#init#teardown(count)
 
   call gdbmi#util#clear_sign()
 
-  let l:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_buf_name
+  let l:gdbmi_buf_name = 'GDBMI_'.a:count
 
   if !g:gdbmi_count
     call s:UndefCommands()
@@ -140,7 +143,7 @@ function! gdbmi#init#teardown(count)
   if exists('t:gdbmi_gdb_job_id')
     tabclose
     if exists('g:gdbmi_delete_after_quit') && g:gdbmi_delete_after_quit
-      exe 'bdelete! GDBMI_'.a:count
+      exe 'bdelete! '.l:gdbmi_buf_name
     endif
   endif
 endfunction

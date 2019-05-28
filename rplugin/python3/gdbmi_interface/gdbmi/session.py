@@ -153,6 +153,11 @@ class Session(object):
                 #  self.info(tg)
                 return True
 
+            elif obj.name == "thread-groups-exited":
+                self._del_thread_group(obj.results['id'])
+                self.ui.del_cursor(obj.results['id'])
+                return True
+
             elif obj.name == "thread-created":
                 tg = self.thread_groups[obj.results['group-id']]
                 tg['threads'].add(obj.results['id'])
@@ -164,7 +169,7 @@ class Session(object):
 
             elif obj.name == "library-loaded":
                 tg = self.thread_groups[obj.results['thread-group']]
-                tg['dl'][obj.results['id']] = obj.results
+                tg['library'][obj.results['id']] = obj.results
                 #  self.info(obj.results['id'])
                 return True
 
@@ -212,9 +217,17 @@ class Session(object):
             'id': group_id,
             "pid": None,
             "threads": set(),
-            "dl": {},
+            "library": {},
         }
         self.thread_groups[group_id] = tg
+        self.info(tg)
+
+    def _del_thread_group(self, group_id):
+        try:
+            tg = self.thread_groups.pop(group_id)
+        except KeyError:
+            return False
+
         self.info(tg)
 
     def add_callback(self, target, proc, filter = None, *kwds):

@@ -12,6 +12,11 @@ function! gdbmi#send(cmd)
   call gdbmi#send_line(a:cmd)
 endfunction
 
+function! gdbmi#navigate(cmd)
+  if !exists('t:gdbmi_gdb_job_id') | return | endif
+  call gdbmi#send_line(a:cmd)
+endfunction
+
 function! gdbmi#eval(expr)
   call gdbmi#send(printf('print %s', a:expr))
 endfunction

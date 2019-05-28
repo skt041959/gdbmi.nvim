@@ -1,5 +1,6 @@
 import os
 import logging
+import logging.handlers
 import traceback
 import inspect
 import sys
@@ -9,7 +10,7 @@ logger = logging.getLogger("gdbmi")
 
 log_format = '%(asctime)s %(levelname)-8s [%(process)d] (%(name)s) %(message)s'
 formatter = logging.Formatter(log_format)
-handler = logging.FileHandler(filename="/tmp/gdbmi_log")
+handler = logging.handlers.WatchedFileHandler(filename="/tmp/gdbmi_log")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
