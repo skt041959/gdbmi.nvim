@@ -72,8 +72,7 @@ function! gdbmi#init#Spawn(cmd) abort
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
-  exe "augroup ". t:gdbmi_buf_name . " | augroup END"
-  exe "autocmd! ". t:gdbmi_buf_name
+  exe "augroup ". t:gdbmi_buf_name . " | autocmd! | augroup END"
   if exists('#TermClose')
     let l:autocmd = printf("autocmd %s TermClose %s call gdbmi#init#teardown(%d)",
           \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
@@ -87,10 +86,12 @@ function! gdbmi#init#Spawn(cmd) abort
     if gdbmi#util#has_yarp()
       let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
       let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
+      if empty(l:tty) | return | endif
       let g:gdbmi#_channel_id = 1
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
     else
-      let l:tty = _gdbmi_start()
+      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
+      if empty(l:tty) | return | endif
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
     endif
   catch

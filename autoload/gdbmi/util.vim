@@ -63,10 +63,17 @@ function! gdbmi#util#jump(file, line, cursor) abort
   let l:target_buf = bufnr(a:file, 1)
 
   if bufnr('%') != l:target_buf
-    exe 'buffer '. l:target_buf
-    let t:gdbmi_win_current_buf = l:target_buf
+    if has('nvim')
+      call nvim_win_set_buf(t:gdbmi_win_jump_window, l:target_buf)
+      redraw
+      doautoall BufReadPost
+      doautoall BufEnter
+    else
+      exe 'buffer '. l:target_buf
+    endif
   endif
 
+  let t:gdbmi_win_current_buf = l:target_buf
   exe 'normal! '.a:line.'G'
   let t:gdbmi_new_cursor_line = a:line
   exe l:window.'wincmd w'

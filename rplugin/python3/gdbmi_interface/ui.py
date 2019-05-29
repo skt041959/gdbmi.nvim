@@ -25,5 +25,11 @@ class UI:
     def display(self, context):
         self.vim.async_call(lambda: self.vim.call('gdbmi#display#display'), context)
 
+    def async_error(self, msg):
+        self.vim.async_call()
+
+    def error(self, msg):
+        self.vim.call('gdbmi#util#print_error', msg)
+
 ui = UI()
 

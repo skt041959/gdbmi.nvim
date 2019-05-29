@@ -22,8 +22,8 @@ logger = getLogger(__name__)
 class Session(object):
     debug, info, warn = (logger.debug, logger.info, logger.warn,)
 
-    def __init__(self, gdbmi_interface, ui):
-        self.gdbmi_interface = gdbmi_interface
+    def __init__(self, gdbmi_interface_fd, ui, name="GDBMI_"):
+        self.gdbmi_interface_fd = gdbmi_interface_fd
         self.ui = ui
         self.is_attached = False
 
@@ -42,9 +42,9 @@ class Session(object):
                          }
 
         self.sel = selectors.DefaultSelector()
-        self.gdbmi_f = os.fdopen(self.gdbmi_interface, mode='wb+', buffering=0)
-        self.sel.register(self.gdbmi_f, selectors.EVENT_READ, self._gdb_stdout_handler)
-        self.conn = Thread(target=self._read, name="conn", args=(self.sel,))
+        self.gdbmi = os.fdopen(self.gdbmi_interface_fd, mode='wb+', buffering=0)
+        self.sel.register(self.gdbmi, selectors.EVENT_READ, self._gdb_stdout_handler)
+        self.conn = Thread(target=self._read, name="GDBMI_", args=(self.sel,))
         self.conn.start()
 
         self.debug("Session launched")
@@ -76,7 +76,7 @@ class Session(object):
 
         buf = token + cmd + "\n"
         #  self.process.stdin.write(buf.encode('utf8'))
-        self.gdbmi_f.write(buf.encode('utf8'))
+        self.gdbmi.write(buf.encode('utf8'))
 
         return token
 

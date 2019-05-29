@@ -9,16 +9,19 @@ class GDBMI_rplugin():
         self.vim = vim
         ui.setVim(vim)
 
-        self.Session = None
+        self.session = None
 
-    def gdbmi_start(self):
+    def gdbmi_start(self, args):
         master, slave = os.openpty()
         self.pty_master = master
         slave_path = os.ttyname(slave)
 
-        self.session = Session(self.pty_master, ui)
-
-        return slave_path
+        if self.session is None:
+            self.session = Session(self.pty_master, ui, name=args[0])
+            return slave_path
+        else:
+            ui.error("There is already a gdb session running. Maybe you want to add another gdb inferior.")
+            return ""
 
     def breakswitch(self, args):
         filename, line = args
