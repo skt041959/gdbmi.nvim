@@ -54,21 +54,22 @@ function! gdbmi#util#jump(file, line, cursor) abort
   if !filereadable(a:file)
     return 0
   endif
+  let l:target_buf = bufnr(a:file, 1)
 
   let l:window = winnr()
   let l:mode = mode()
   exe t:gdbmi_win_jump_window.'wincmd w'
-  let t:gdbmi_win_current_buf = bufnr('%')
 
-  let l:target_buf = bufnr(a:file, 1)
-
-  if bufnr('%') != l:target_buf
-    if has('nvim')
-      call nvim_win_set_buf(t:gdbmi_win_jump_window, l:target_buf)
+  if has('nvim')
+    let l:winHandle = nvim_get_current_win()
+    if nvim_win_get_buf(l:winHandle) != l:target_buf
+      call nvim_win_set_buf(l:winHandle, l:target_buf)
       redraw
       doautoall BufReadPost
       doautoall BufEnter
-    else
+    endif
+  else
+    if bufnr('%') != l:target_buf
       exe 'buffer '. l:target_buf
     endif
   endif
@@ -91,7 +92,9 @@ function! gdbmi#util#set_cursor_sign() abort
   let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
   let l:current_buf = t:gdbmi_win_current_buf
   if t:gdbmi_new_cursor_line != -1 && l:current_buf != -1
-    exe 'sign place '.t:gdbmi_cursor_sign_id.' name=GdbmiCurrentLine line='.t:gdbmi_new_cursor_line.' buffer='.l:current_buf
+    let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%s file=%s',
+          \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, l:current_buf)
+    exec l:cmd
   endif
   if l:old != -1
     exe 'sign unplace '.l:old
@@ -103,13 +106,16 @@ endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
   let l:buf = gdbmi#util#jump(a:file, a:line, 0)
-  call add(t:gdbmi_breakpoints_sign_ids, 5000+a:id)
-  exe 'sign place '.(5000+a:id).' name=GdbmiBreakpoint line='.a:line.' file='.a:file
+  let l:sid = 5000 + a:id
+  call add(t:gdbmi_breakpoints_sign_ids, l:sid)
+  let l:cmd = printf('sign place %d name=GdbmiBreakpoint line=%s file=%s', l:sid, a:line, a:file)
+  exec l:cmd
 endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id) abort
-  call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, 5000+a:id))
-  exe 'sign unplace '.(5000+a:id)
+  let l:sid = 5000 + a:id
+  call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, l:sid))
+  exec 'sign unplace '.l:sid
 endfunction
 
 function! gdbmi#util#get_selection(...) abort
