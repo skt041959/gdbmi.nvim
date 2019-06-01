@@ -15,10 +15,10 @@ logger = getLogger(__name__)
 class Session(object):
     debug, info, warn = (logger.debug, logger.info, logger.warn,)
 
-    def __init__(self, gdbmi_interface_fd, ui, name="GDBMI_"):
+    def __init__(self, gdbmi_interface_fd, ui, name):
+        self.name = name
         self.gdbmi_interface_fd = gdbmi_interface_fd
         self.ui = ui
-        self.is_attached = False
 
         self.thread_groups = {}
         self.breakpoints = {}

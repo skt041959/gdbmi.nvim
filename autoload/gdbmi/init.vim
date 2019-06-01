@@ -144,12 +144,11 @@ function! gdbmi#init#Spawn(cmd) abort
 endfunction
 
 function! gdbmi#init#teardown(count)
+  let l:gdbmi_buf_name = 'GDBMI_'.a:count
 
   call gdbmi#util#clear_sign()
 
-  call gdbmi#util#rpcnotify('gdbmi_stop')
-
-  let l:gdbmi_buf_name = 'GDBMI_'.a:count
+  call gdbmi#util#rpcnotify('gdbmi_stop', l:gdbmi_buf_name)
 
   if !g:gdbmi_count
     call s:UndefCommands()
