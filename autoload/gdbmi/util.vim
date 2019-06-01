@@ -1,5 +1,5 @@
 function! gdbmi#util#print_error(msg) abort
-    echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
+  echohl Error | echomsg '[gdbmi]: ' . a:msg | echohl None
 endfunction
 
 function! gdbmi#util#has_yarp() abort
@@ -128,12 +128,12 @@ function! gdbmi#util#del_breakpoint_sign(id) abort
 endfunction
 
 function! gdbmi#util#get_selection(...) abort
-    let [l:lnum1, l:col1] = getpos("'<")[1:2]
-    let [l:lnum2, l:col2] = getpos("'>")[1:2]
-    let l:lines = getline(l:lnum1, l:lnum2)
-    let l:lines[-1] = l:lines[-1][: l:col2 - (&selection ==? 'inclusive' ? 1 : 2)]
-    let l:lines[0] = l:lines[0][l:col1 - 1:]
-    return join(l:lines, "\n")
+  let [l:lnum1, l:col1] = getpos("'<")[1:2]
+  let [l:lnum2, l:col2] = getpos("'>")[1:2]
+  let l:lines = getline(l:lnum1, l:lnum2)
+  let l:lines[-1] = l:lines[-1][: l:col2 - (&selection ==? 'inclusive' ? 1 : 2)]
+  let l:lines[0] = l:lines[0][l:col1 - 1:]
+  return join(l:lines, "\n")
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort
