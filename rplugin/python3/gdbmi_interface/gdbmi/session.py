@@ -59,7 +59,7 @@ class Session(object):
 
         return p
 
-    def _send(self, cmd, handler=None, **kwargs):
+    def _send(self, cmd, **kwargs):
         self.token += 1
         token = "%04d" % self.token
         self.commands[token] = {'cmd': cmd, 'handler': handler}
@@ -70,9 +70,6 @@ class Session(object):
         self.gdbmi.write(buf.encode('utf8'))
 
         return token
-
-    def send_cmd(self, cmd):
-        token = self._send(cmd, self._handle)
 
     @log_exceptions(logger)
     def read_task(self, *args):
@@ -93,7 +90,6 @@ class Session(object):
             self.warn(["IGN:", token, obj])
             return False
 
-        #  self.gdb_stdout_buf.append(line)
         self.debug('\n'+repr(line))
         try:
             token, obj = self.parser.parse(line.decode('utf8').rstrip('\r\n') + '\n')
@@ -104,96 +100,89 @@ class Session(object):
                 return
             self.debug("obj {}".format(obj.What))
             self.handlers.get(obj.What, _ignore)(token, obj)
-            if token:
-                event = self.commands[token].get('waiting', None)
-                if event is not None:
-                    event.set()
+            event = self.commands.get(token, {}).get('waiting', None)
+            if event is not None:
+                event.set()
 
     def _handle_result(self, token, obj):
         self.debug("handle result")
         if token is None:
-            return False
+            return
 
-        command = self.commands[token]
-        try:
-            command['state'] = obj.What
-            callback = command.get('result_callback', None)
+        command = self.commands.get(token, None)
+        if command is None:
+            self.error("Unexpected feed back token")
+            return
+
+        command['state'] = obj.What
+        command['result'] = obj
+        if "event" in command:
+            command["event"].set()
+
+    def _handle_async_notify(self, token, obj, kwargs):
+        if obj.name == "thread-group-added":
+            self._add_thread_group(obj.results)
+            return True
+
+        elif obj.name == "thread-group-started":
+            tg = self.thread_groups[obj.results['id']]
+            tg['pid'] = obj.results['pid']
+            return True
+
+        elif obj.name == "thread-groups-exited":
+            self._del_thread_group(obj.results['id'])
+            self.ui.del_cursor(obj.results['id'])
+            return True
+
+        elif obj.name == "thread-created":
+            tg = self.thread_groups[obj.results['group-id']]
+            tg['threads'].add(obj.results['id'])
+            return True
+
+        elif obj.name == "thread-selected":
+            self.ui.jump_frame(obj.results['frame'])
+
+        elif obj.name == "library-loaded":
+            tg = self.thread_groups[obj.results['thread-group']]
+            tg['library'][obj.results['id']] = obj.results
+            return True
+
+        elif obj.name == "breakpoint-modified":
+            self._update_breakpoint(obj.results['bkpt'])
+            return True
+
+        elif obj.name == "breakpoint-created":
+            self._update_breakpoint(obj.results['bkpt'], new=True)
+            return True
+
+        elif obj.name == "breakpoint-deleted":
+            self._update_breakpoint(None, number=obj.results['id'])
+
+    def _handle_async_exe(self, token, obj, kwargs):
+        if obj.name == 'running':
+            self.exec_state = 'running'
+            return True
+
+        elif obj.name == 'stopped':
+            self.exec_state = 'stopped'
+            frame = obj.results.get('frame', None)
+            if frame is None:
+                return True
+            callback = self.commands.get(token, {}).get('exec_callback', None)
             if callback:
-                callback(obj)
-        except:
-            pass
-
-        if obj.result_class == "done":
-            pass
-        elif obj.result_class == "running":
-            pass
-        elif obj.result_class == "error":
-            pass
-        return True
+                self.debug("calling exec callback")
+                callback(frame)
+            self.ui.jump_frame(frame)
+            self._query_display(frame)
+            return True
 
     def _handle_async(self, token, obj, **kwargs):
         self.debug("handle async")
         if obj.async_class == "NOTIFY_CLASS":
-            if obj.name == "thread-group-added":
-                self._add_thread_group(obj.results)
-                return True
-
-            elif obj.name == "thread-group-started":
-                tg = self.thread_groups[obj.results['id']]
-                tg['pid'] = obj.results['pid']
-                #  self.info(tg)
-                return True
-
-            elif obj.name == "thread-groups-exited":
-                self._del_thread_group(obj.results['id'])
-                self.ui.del_cursor(obj.results['id'])
-                return True
-
-            elif obj.name == "thread-created":
-                tg = self.thread_groups[obj.results['group-id']]
-                tg['threads'].add(obj.results['id'])
-                #  self.info(tg)
-                return True
-
-            elif obj.name == "thread-selected":
-                self.ui.jump_frame(obj.results['frame'])
-
-            elif obj.name == "library-loaded":
-                tg = self.thread_groups[obj.results['thread-group']]
-                tg['library'][obj.results['id']] = obj.results
-                #  self.info(obj.results['id'])
-                return True
-
-            elif obj.name == "breakpoint-modified":
-                self._update_breakpoint(obj.results['bkpt'])
-                return True
-
-            elif obj.name == "breakpoint-created":
-                self._update_breakpoint(obj.results['bkpt'], new=True)
-                return True
-
-            elif obj.name == "breakpoint-deleted":
-                self._update_breakpoint(None, number=obj.results['id'])
+            return self._handle_async_notify(token, obj, kwargs)
 
         elif obj.async_class == 'EXEC_CLASS':
-            if obj.name == 'running':
-                self.exec_state = 'running'
-                return True
-
-            elif obj.name == 'stopped':
-                self.exec_state = 'stopped'
-                if 'frame' not in obj.results:
-                    return True
-                if token:
-                    callback = self.commands[token].get('exec_callback', None)
-                    if callback:
-                        self.debug("calling exec callback")
-                        callback(frame=obj.results['frame'])
-                        callback(filename=obj.results['frame']['fullname'],
-                                 line=obj.results['frame']['line'])
-                self.ui.jump_frame(obj.results['frame'])
-                self._query_display()
-                return True
+            return self._handle_async_exe(token, obj, kwargs)
 
         return False
 
@@ -220,14 +209,6 @@ class Session(object):
             return False
 
         self.info(tg)
-
-    def add_callback(self, target, proc, filter = None, *kwds):
-        to_add = {
-            'proc': proc,
-            'kwds': kwds,
-            'filter': filter,
-        }
-        self._callbacks.setdefault(target, []).append(to_add)
 
     def add_display(self, expr):
         self._display_exprs[expr] = []
@@ -268,15 +249,6 @@ class Session(object):
     def wait_for(self, token):
         self.debug("waiting for {}".format(token))
         return self.commands[token]['waiting'].wait()
-
-    def inferior_tty_set(self):
-        pid = os.getpid()
-        (master, slave) = os.openpty()
-        slave_node = "/proc/{0}/fd/{1}".format(pid, slave)
-        token = self._send("-inferior-tty-set " + slave_node, waiting=Event())
-        self.wait_for(token)
-
-        return master
 
     def do_breakinsert(self, **kwargs):
         def get_bkptnumber(obj):
@@ -340,19 +312,6 @@ class Session(object):
             elif enabled == 'n':
                 token = self._send('-break-disable '+bkpt['number'])
 
-    def _filter(self, container, what, **kwargs):
-
-        def f(token, obj):
-            #  self.debug(repr(obj))
-            if obj.What == what:
-                for k,v in kwargs.items():
-                    if getattr(obj, k, None) != v:
-                        break
-                else:
-                    container.append(obj)
-
-        return f
-
     def do_exec(self, cmd, *args, callback=None):
         if cmd in ('run', 'next', 'step', 'continue', 'finish',
                        'next-instruction', 'step-instruction'):
@@ -387,12 +346,17 @@ class Session(object):
 
         return breakpoints
 
-    def _query_display(self):
-        self._query_display_expr()
+    def _query_display(self, frame):
+        self._query_display_expr(frame)
 
-    def _query_display_expr(self):
-        for expr in self._display_exprs.keys():
-            self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
+    def _query_display_expr(self, frame):
+        for expr, values in self._display_exprs.keys():
+            result_event = asyncio.Event()
+            #  self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
+            token = self._send('-data-evaluate-expression {}'.format(expr), event=result_event)
+            await result_event.wait()
+            obj = self.commands[token]['result']
+            values.setdefault(frame['addr'], []).append(obj['value'])
 
     def stop(self):
         loop = asyncio.get_event_loop()
