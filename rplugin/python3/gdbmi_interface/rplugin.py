@@ -23,6 +23,10 @@ class GDBMI_rplugin():
             ui.error("There is already a gdb session running. Maybe you want to add another gdb inferior.")
             return ""
 
+    def gdbmi_stop(self, args):
+        self.session.stop()
+        self.session = None
+
     def breakswitch(self, args):
         filename, line = args
         bp_id = self.session.breakpoints_status(filename, line)

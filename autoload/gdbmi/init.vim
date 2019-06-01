@@ -37,6 +37,47 @@ function! s:DefineCommands()
   command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
 endfunction
 
+function! s:StartGDBMI()
+  try
+    if gdbmi#util#has_yarp()
+      let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
+      let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
+      if empty(l:tty) | return l:tty | endif
+      let g:gdbmi#_channel_id = 1
+    else
+      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
+      if empty(l:tty) | return l:tty | endif
+    endif
+    let t:gdbmi_channel_id = g:gdbmi#_channel_id
+    return l:tty
+  catch
+    if gdbmi#util#has_yarp()
+      if !has('nvim') && !exists('*neovim_rpc#serveraddr')
+        call gdbmi#util#print_error(
+              \ 'gdbmi.nvim requires vim-hug-neovim-rpc plugin in Vim')
+      endif
+
+      if !exists('*yarp#py3')
+        call gdbmi#util#print_error(
+              \ 'gdbmi.nvim requires nvim-yarp plugin')
+      endif
+    else
+      call gdbmi#util#print_error(
+            \ 'gdbmi.nvim failed to load. '
+            \ .'Try the :UpdateRemotePlugins command and restart Neovim.')
+    endif
+    return ""
+  endtry
+endfunction
+
+function! s:StopGDBMI()
+  if gdbmi#util#has_yarp()
+    call t:gdbmi_yarp.request('_gdbmi_stop')
+  else
+    gdbmi#util#rpcrequest('gdbmi_stop')
+  endif
+endfunction
+
 function! gdbmi#init#Spawn(cmd) abort
   if has('nvim')
     if !has('python3')
@@ -82,36 +123,8 @@ function! gdbmi#init#Spawn(cmd) abort
   endif
   exec l:autocmd
 
-  try
-    if gdbmi#util#has_yarp()
-      let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
-      let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
-      if empty(l:tty) | return | endif
-      let g:gdbmi#_channel_id = 1
-      let t:gdbmi_channel_id = g:gdbmi#_channel_id
-    else
-      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
-      if empty(l:tty) | return | endif
-      let t:gdbmi_channel_id = g:gdbmi#_channel_id
-    endif
-  catch
-    if gdbmi#util#has_yarp()
-      if !has('nvim') && !exists('*neovim_rpc#serveraddr')
-        call gdbmi#util#print_error(
-              \ 'gdbmi.nvim requires vim-hug-neovim-rpc plugin in Vim')
-      endif
-
-      if !exists('*yarp#py3')
-        call gdbmi#util#print_error(
-              \ 'gdbmi.nvim requires nvim-yarp plugin')
-      endif
-    else
-      call gdbmi#util#print_error(
-            \ 'gdbmi.nvim failed to load. '
-            \ .'Try the :UpdateRemotePlugins command and restart Neovim.')
-    endif
-    return
-  endtry
+  let l:tty = s:StartGDBMI()
+  if empty(l:tty) | return | endif
 
   let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
 

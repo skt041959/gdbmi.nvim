@@ -406,10 +406,6 @@ class Session(object):
     def send_cmd(self, cmd):
         token = self._send(cmd, self._handle)
 
-    def quit(self):
-        self._send("-gdb-exit", self._handle)
-        self.conn.join()
-
 
 class GDBStopped(Exception):
     pass

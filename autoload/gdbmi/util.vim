@@ -64,18 +64,27 @@ function! gdbmi#util#jump(file, line, cursor) abort
     let l:winHandle = nvim_get_current_win()
     if nvim_win_get_buf(l:winHandle) != l:target_buf
       call nvim_win_set_buf(l:winHandle, l:target_buf)
+      exe 'normal! '.a:line.'G'
       redraw
       doautoall BufReadPost
       doautoall BufEnter
+    else
+      if a:line <= line('w0') || a:line >= line('w$')
+        exe 'normal! '.a:line.'G'
+      endif
     endif
   else
     if bufnr('%') != l:target_buf
       exe 'buffer '. l:target_buf
+      exe 'normal! '.a:line.'G'
+    else
+      if a:line <= line('w0') || a:line >= line('w$')
+        exe 'normal! '.a:line.'G'
+      endif
     endif
   endif
 
   let t:gdbmi_win_current_buf = l:target_buf
-  exe 'normal! '.a:line.'G'
   let t:gdbmi_new_cursor_line = a:line
   exe l:window.'wincmd w'
   if l:mode ==? 't' || l:mode ==? 'i'
@@ -92,7 +101,7 @@ function! gdbmi#util#set_cursor_sign() abort
   let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
   let l:current_buf = t:gdbmi_win_current_buf
   if t:gdbmi_new_cursor_line != -1 && l:current_buf != -1
-    let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%s file=%s',
+    let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%d buffer=%d',
           \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, l:current_buf)
     exec l:cmd
   endif
