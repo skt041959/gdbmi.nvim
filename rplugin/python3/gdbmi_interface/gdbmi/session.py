@@ -1,17 +1,10 @@
 import os
-import signal
-import pty
-import sys
 import fcntl
-import selectors
-import functools
-from threading import Thread, Event
-from collections import deque
+import asyncio
 
-from collections import deque
 from subprocess import Popen, PIPE
 
-from gdbmi_interface.log import getLogger, exception, log_exceptions
+from gdbmi_interface.log import getLogger, log_exceptions
 from gdbmi_interface.gdbmi.parse import GDBOutputParse, ParseError
 from gdbmi_interface.gdbmi.parse import ResultRecord, AsyncRecord, StreamRecord
 
@@ -41,11 +34,9 @@ class Session(object):
                          'StreamRecord'   : self._handle_stream,
                          }
 
-        self.sel = selectors.DefaultSelector()
         self.gdbmi = os.fdopen(self.gdbmi_interface_fd, mode='wb+', buffering=0)
-        self.sel.register(self.gdbmi, selectors.EVENT_READ, self._gdb_stdout_handler)
-        self.conn = Thread(target=self._read, name="GDBMI_", args=(self.sel,))
-        self.conn.start()
+        loop = asyncio.get_event_loop()
+        loop.add_reader(self.gdbmi_interface_fd, self.read_task)
 
         self.debug("Session launched")
 
@@ -80,15 +71,15 @@ class Session(object):
 
         return token
 
-    def _read(self, selector):
-        while True:
-            events = selector.select()
-            for key, mask in events:
-                try:
-                    key.data(key.fileobj, mask)
-                except GDBStopped:
-                    self.error("GDBStopped")
-                    return
+    def send_cmd(self, cmd):
+        token = self._send(cmd, self._handle)
+
+    @log_exceptions(logger)
+    def read_task(self, *args):
+        line = self.gdbmi.readline()
+        if not line:
+            raise GDBStopped
+        self._handle(line)
 
     @log_exceptions(logger)
     def _gdb_stdout_handler(self, fileobj, mask):
@@ -403,8 +394,9 @@ class Session(object):
         for expr in self._display_exprs.keys():
             self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
 
-    def send_cmd(self, cmd):
-        token = self._send(cmd, self._handle)
+    def stop(self):
+        loop = asyncio.get_event_loop()
+        loop.remove_reader(self.gdbmi_interface_fd)
 
 
 class GDBStopped(Exception):

@@ -10,20 +10,23 @@ class GDBMI_rplugin():
         ui.setVim(vim)
 
         self.session = None
+        self.master = None
+        self.slave_path = ""
 
-    def gdbmi_start(self, args):
-        master, slave = os.openpty()
-        self.pty_master = master
-        slave_path = os.ttyname(slave)
+    def start(self, args):
+        if self.master is None:
+            master, slave = os.openpty()
+            self.pty_master = master
+            self.slave_path = os.ttyname(slave)
 
         if self.session is None:
             self.session = Session(self.pty_master, ui, name=args[0])
-            return slave_path
+            return self.slave_path
         else:
             ui.error("There is already a gdb session running. Maybe you want to add another gdb inferior.")
             return ""
 
-    def gdbmi_stop(self, args):
+    def stop(self, args):
         self.session.stop()
         self.session = None
 

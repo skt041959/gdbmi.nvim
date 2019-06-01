@@ -147,6 +147,8 @@ function! gdbmi#init#teardown(count)
 
   call gdbmi#util#clear_sign()
 
+  call gdbmi#util#rpcnotify('gdbmi_stop')
+
   let l:gdbmi_buf_name = 'GDBMI_'.a:count
 
   if !g:gdbmi_count

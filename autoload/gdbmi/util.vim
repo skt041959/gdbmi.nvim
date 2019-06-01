@@ -139,13 +139,21 @@ endfunction
 function! gdbmi#util#rpcnotify(event, ...) abort
   if !exists('t:gdbmi_channel_id') | return | endif
 
-  call rpcnotify(t:gdbmi_channel_id, a:event, a:000)
+  if gdbmi#util#has_yarp()
+    call t:gdbmi_yarp.notify(a:event, a:000)
+  else
+    call rpcnotify(t:gdbmi_channel_id, a:event, a:000)
+  endif
 endfunction
 
 function! gdbmi#util#rpcrequest(event, ...) abort
   if !exists('t:gdbmi_channel_id') | return | endif
 
-  return rpcrequest(t:gdbmi_channel_id, a:event, a:000)
+  if gdbmi#util#has_yarp()
+    return t:gdbmi_yarp.request(a:event, a:000)
+  else
+    return rpcrequest(t:gdbmi_channel_id, a:event, a:000)
+  endif
 endfunction
 
 "}}}
