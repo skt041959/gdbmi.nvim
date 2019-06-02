@@ -16,8 +16,14 @@ function! gdbmi#util#init() abort
   let t:gdbmi_breakpoints_sign_ids = []
 endfunction
 
+let s:gdbmi_enable_keymap_autocmd = 1
+
 function! gdbmi#util#on_BufEnter() abort
   if !exists('t:gdbmi_gdb_job_id')
+    return
+  endif
+
+  if !s:gdbmi_enable_keymap_autocmd
     return
   endif
 
@@ -30,6 +36,10 @@ endfunction
 
 function! gdbmi#util#on_BufLeave() abort
   if !exists('t:gdbmi_gdb_job_id')
+    return
+  endif
+
+  if !s:gdbmi_enable_keymap_autocmd
     return
   endif
 
@@ -54,9 +64,11 @@ function! gdbmi#util#jump(file, line, cursor) abort
 
   let l:window = winnr()
   let l:mode = mode()
+
+  let s:gdbmi_enable_keymap_autocmd = 0
   exe t:gdbmi_win_jump_window.'wincmd w'
 
-  if bufnr('%') != l:target_buf
+  if winbufnr(0) != l:target_buf
     let l:eventignore = &eventignore
     set eventignore+=BufReadPost,BufEnter
     exe 'buffer '. l:target_buf
@@ -74,6 +86,7 @@ function! gdbmi#util#jump(file, line, cursor) abort
   let t:gdbmi_win_current_buf = l:target_buf
   let t:gdbmi_new_cursor_line = a:line
   exe l:window.'wincmd w'
+  let s:gdbmi_enable_keymap_autocmd = 1
   if l:mode ==? 't' || l:mode ==? 'i'
     startinsert
   endif
