@@ -41,18 +41,14 @@ function! gdbmi#util#on_BufLeave() abort
 endfunction
 
 function! gdbmi#util#clear_sign() abort
-  if t:gdbmi_cursor_sign_id > 0
-    exe 'sign unplace '.t:gdbmi_cursor_sign_id
-  endif
-
-  for id in t:gdbmi_breakpoints_sign_ids
-    exe 'sign unplace '.id
-  endfor
+  call gdbmi#util#clear_cursor_sign()
+  call gdbmi#util#clear_breakpoint_sign()
 endfunction
 
 function! gdbmi#util#jump(file, line, cursor) abort
   if !filereadable(a:file)
-    return 0
+    call gdbmi#util#clear_cursor_sign()
+    return
   endif
   let l:target_buf = bufnr(a:file, 1)
 
@@ -104,6 +100,12 @@ function! gdbmi#util#set_cursor_sign() abort
   redraw
 endfunction
 
+function! gdbmi#util#clear_cursor_sign() abort
+  if t:gdbmi_cursor_sign_id > 0
+    exe 'sign unplace '.t:gdbmi_cursor_sign_id
+  endif
+endfunction
+
 function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
   let l:buf = gdbmi#util#jump(a:file, a:line, 0)
   let l:sid = 5000 + a:id
@@ -116,6 +118,12 @@ function! gdbmi#util#del_breakpoint_sign(id) abort
   let l:sid = 5000 + a:id
   call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, l:sid))
   exec 'sign unplace '.l:sid
+endfunction
+
+function! gdbmi#util#clear_breakpoint_sign() abort
+  for id in t:gdbmi_breakpoints_sign_ids
+    exe 'sign unplace '.id
+  endfor
 endfunction
 
 function! gdbmi#util#get_selection(...) abort

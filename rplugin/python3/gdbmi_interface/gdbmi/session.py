@@ -7,13 +7,14 @@ from subprocess import Popen, PIPE
 from gdbmi_interface.log import getLogger, log_exceptions
 from gdbmi_interface.gdbmi.parse import GDBOutputParse, ParseError
 from gdbmi_interface.gdbmi.parse import ResultRecord, AsyncRecord, StreamRecord
+from gdbmi_interface.util import show_perf
 
 
 logger = getLogger(__name__)
 
 
 class Session(object):
-    debug, info, warn = (logger.debug, logger.info, logger.warn,)
+    debug, info, warn, error = (logger.debug, logger.info, logger.warn, logger.error)
 
     def __init__(self, name, gdbmi_interface_fd, slave_path, ui):
         self.name = name
@@ -62,15 +63,14 @@ class Session(object):
 
     def _send(self, cmd, **kwargs):
         self.token += 1
-        token = "%04d" % self.token
-        self.commands[token] = {'cmd': cmd}
-        self.commands[token].update(kwargs)
+        self.commands[self.token] = {'cmd': cmd}
+        self.commands[self.token].update(kwargs)
 
-        buf = token + cmd + "\n"
-        #  self.process.stdin.write(buf.encode('utf8'))
+        buf = f"{ self.token :04}{ cmd }\n"
         self.gdbmi.write(buf.encode('utf8'))
+        self.debug(buf)
 
-        return token
+        return self.token
 
     @log_exceptions(logger)
     def read_task(self, *args):
@@ -90,6 +90,7 @@ class Session(object):
         except ParseError as e:
             raise e
         else:
+            token = int(token) if token is not None else token
             if obj is None or obj is self.parser.GDB_PROMPT:
                 return
             self.debug("obj {}".format(obj.What))
@@ -112,6 +113,7 @@ class Session(object):
         command['result'] = obj
         if "event" in command:
             command["event"].set()
+            self.debug(f"event of {token} set")
 
     def _handle_async_notify(self, token, obj, kwargs):
         if obj.name == "thread-group-added":
@@ -153,12 +155,12 @@ class Session(object):
             self._update_breakpoint(None, number=obj.results['id'])
 
     def _handle_async_exe(self, token, obj, kwargs):
+        self.exec_state = obj.name
+
         if obj.name == 'running':
-            self.exec_state = 'running'
             return True
 
         elif obj.name == 'stopped':
-            self.exec_state = 'stopped'
             frame = obj.results.get('frame', None)
             if frame is None:
                 return True
@@ -222,11 +224,7 @@ class Session(object):
             self.ui.del_breakpoint(int(number))
             return
 
-        if number in self.breakpoints:
-            self.breakpoints[number].update(info)
-        else:
-            self.breakpoints[number] = dict(info)
-
+        self.breakpoints.setdefault(number, {}).update(info)
         if new and 'fullname' in info:
             self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
 
@@ -338,19 +336,39 @@ class Session(object):
         return breakpoints
 
     def add_display(self, expr):
-        self._display_exprs[expr] = []
+        self._display_exprs[expr] = {}
+        self.debug(self._display_exprs)
 
     def _query_display(self, frame):
-        self._query_display_expr(frame)
+        self.debug(frame)
+        result = self._query_display_expr(frame)
+        #  self.debug(result)
 
-    async def _query_display_expr(self, frame):
-        for expr, values in self._display_exprs.keys():
-            result_event = asyncio.Event()
-            #  self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
-            token = self._send(f'-data-evaluate-expression {expr}', event=result_event)
-            await result_event.wait()
+        self._gather_result(result)
+
+    def _query_display_expr(self, frame):
+        result = {}
+        for expr, values in self._display_exprs.items():
+            ev = asyncio.Event()
+            token = self._send(f'-data-evaluate-expression {expr}', event=ev)
+            result[token] = (ev, frame, values)
+
+        return result
+
+    def _gather_result(self, result):
+        async def one_expr(token, ev, frame, values):
+            await ev.wait()
             obj = self.commands[token]['result']
-            values.setdefault(frame['addr'], []).append(obj['value'])
+            values.setdefault(frame['addr'], []).append(obj.results)
+            self.debug(values)
+            return token
+
+        coros = [one_expr(token, *t_values) for token, t_values in result.items()]
+        doneset = asyncio.gather(*coros)
+        self.debug(doneset)
+        #  show_perf(lambda : asyncio.gather(*coros))
+        #  task = asyncio.ensure_future(asyncio.gather(*coros))
+        #  task.add_done_callback(lambda : self.debug("all expr get value"))
 
     def stop(self):
         loop = asyncio.get_event_loop()

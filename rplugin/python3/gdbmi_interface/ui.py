@@ -12,6 +12,8 @@ class UI:
     def jump_frame(self, frame):
         if 'fullname' in frame:
             self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump', frame['fullname'], frame['line'], 1))
+        else:
+            self.vim.async_call(lambda : self.vim.call('gdbmi#util#clear_cursor_sign'))
 
     def set_breakpoint(self, id, file, line):
         self.vim.async_call(lambda : self.vim.call('gdbmi#util#set_breakpoint_sign', id, file, line))

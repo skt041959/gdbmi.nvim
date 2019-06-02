@@ -12,7 +12,7 @@ long seqsum(long n) {
         {
             ret += 1;
         }
-        printf("n: %d\n", n);
+        printf("n: %ld\n", n);
     }
     return ret;
 }
