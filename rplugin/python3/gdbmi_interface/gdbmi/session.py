@@ -15,8 +15,9 @@ logger = getLogger(__name__)
 class Session(object):
     debug, info, warn = (logger.debug, logger.info, logger.warn,)
 
-    def __init__(self, gdbmi_interface_fd, ui, name):
+    def __init__(self, name, gdbmi_interface_fd, slave_path, ui):
         self.name = name
+        self.slave_path = slave_path
         self.gdbmi_interface_fd = gdbmi_interface_fd
         self.ui = ui
 
@@ -62,7 +63,7 @@ class Session(object):
     def _send(self, cmd, **kwargs):
         self.token += 1
         token = "%04d" % self.token
-        self.commands[token] = {'cmd': cmd, 'handler': handler}
+        self.commands[token] = {'cmd': cmd}
         self.commands[token].update(kwargs)
 
         buf = token + cmd + "\n"
@@ -74,13 +75,6 @@ class Session(object):
     @log_exceptions(logger)
     def read_task(self, *args):
         line = self.gdbmi.readline()
-        if not line:
-            raise GDBStopped
-        self._handle(line)
-
-    @log_exceptions(logger)
-    def _gdb_stdout_handler(self, fileobj, mask):
-        line = fileobj.readline()
         if not line:
             raise GDBStopped
         self._handle(line)
@@ -210,9 +204,6 @@ class Session(object):
 
         self.info(tg)
 
-    def add_display(self, expr):
-        self._display_exprs[expr] = []
-
     def _callback(self, target, **kwds):
         for to_call in self._callbacks.get(target, []):
             if ('filter' in to_call) and (not to_call['filter'](kwds)):
@@ -244,7 +235,7 @@ class Session(object):
             if bkpt['type'] == 'breakpoint' and int(bkpt['line']) == int(line) and bkpt['fullname'] == filename:
                 return number
         else:
-            return None
+            return 0
 
     def wait_for(self, token):
         self.debug("waiting for {}".format(token))
@@ -276,7 +267,7 @@ class Session(object):
 
         bkpt_number = None
         token = self._send("-break-insert " + " ".join(args),
-                           waiting=Event(), result_callback = get_bkptnumber)
+                           waiting=asyncio.Event(), result_callback = get_bkptnumber)
         self.wait_for(token)
 
         return bkpt_number
@@ -289,7 +280,7 @@ class Session(object):
             if bkpt['fullname'] == filename and bkpt['line'] == line:
                 break
 
-        token = self._send('-break-delete {}'.format(number), waiting=Event())
+        token = self._send(f'-break-delete {number}', waiting=asyncio.Event())
         self.wait_for(token)
 
         self.breakpoints.pop(number)
@@ -320,7 +311,7 @@ class Session(object):
 
     def inferior_interrupt(self):
         self.process.send_signal(2)
-        return  True
+        return True
 
     def inferior_stdin(self, content):
         if not content.endswith("\n"):
@@ -346,14 +337,17 @@ class Session(object):
 
         return breakpoints
 
+    def add_display(self, expr):
+        self._display_exprs[expr] = []
+
     def _query_display(self, frame):
         self._query_display_expr(frame)
 
-    def _query_display_expr(self, frame):
+    async def _query_display_expr(self, frame):
         for expr, values in self._display_exprs.keys():
             result_event = asyncio.Event()
             #  self._send('-data-evaluate-expression {}'.format(expr), lambda obj: self._display_exprs[expr].append(obj['value']))
-            token = self._send('-data-evaluate-expression {}'.format(expr), event=result_event)
+            token = self._send(f'-data-evaluate-expression {expr}', event=result_event)
             await result_event.wait()
             obj = self.commands[token]['result']
             values.setdefault(frame['addr'], []).append(obj['value'])

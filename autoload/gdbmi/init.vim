@@ -38,20 +38,14 @@ function! s:DefineCommands()
 endfunction
 
 function! s:StartGDBMI()
-  try
-    if gdbmi#util#has_yarp()
+  if gdbmi#util#has_yarp()
+    try
       let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
       let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
-      if empty(l:tty) | return l:tty | endif
       let g:gdbmi#_channel_id = 1
-    else
-      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
-      if empty(l:tty) | return l:tty | endif
-    endif
-    let t:gdbmi_channel_id = g:gdbmi#_channel_id
-    return l:tty
-  catch
-    if gdbmi#util#has_yarp()
+      let t:gdbmi_channel_id = g:gdbmi#_channel_id
+      return l:tty
+    catch
       if !has('nvim') && !exists('*neovim_rpc#serveraddr')
         call gdbmi#util#print_error(
               \ 'gdbmi.nvim requires vim-hug-neovim-rpc plugin in Vim')
@@ -61,20 +55,27 @@ function! s:StartGDBMI()
         call gdbmi#util#print_error(
               \ 'gdbmi.nvim requires nvim-yarp plugin')
       endif
-    else
+      return ''
+    endtry
+  else
+    try
+      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
+      let t:gdbmi_channel_id = g:gdbmi#_channel_id
+      return l:tty
+    catch
       call gdbmi#util#print_error(
             \ 'gdbmi.nvim failed to load. '
             \ .'Try the :UpdateRemotePlugins command and restart Neovim.')
-    endif
-    return ""
-  endtry
+      return ''
+    endtry
+  endif
 endfunction
 
 function! s:StopGDBMI()
   if gdbmi#util#has_yarp()
     call t:gdbmi_yarp.request('_gdbmi_stop')
   else
-    gdbmi#util#rpcrequest('gdbmi_stop')
+    call gdbmi#util#rpcrequest('gdbmi_stop')
   endif
 endfunction
 
@@ -113,12 +114,12 @@ function! gdbmi#init#Spawn(cmd) abort
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
-  exe "augroup ". t:gdbmi_buf_name . " | autocmd! | augroup END"
+  exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
   if exists('#TermClose')
-    let l:autocmd = printf("autocmd %s TermClose %s call gdbmi#init#teardown(%d)",
+    let l:autocmd = printf('autocmd %s TermClose %s call gdbmi#init#teardown(%d)',
           \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
   else
-    let l:autocmd = printf("autocmd %s BufDelete %s call gdbmi#init#teardown(%d)",
+    let l:autocmd = printf('autocmd %s BufDelete %s call gdbmi#init#teardown(%d)',
           \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
   endif
   exec l:autocmd
@@ -128,9 +129,10 @@ function! gdbmi#init#Spawn(cmd) abort
 
   let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
 
-  sp | wincmd j | enew
-  if exists('g:gdbmi_split_direction') && g:gdbmi_split_direction == 'vertical'
-    wincmd L
+  if exists('g:gdbmi_split_direction') && g:gdbmi_split_direction ==# 'vertical'
+    vsp | wincmd l | enew
+  else
+    sp | wincmd j | enew
   endif
 
   if has('nvim')

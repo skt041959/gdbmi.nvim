@@ -17,7 +17,7 @@ class GDBMI_rplugin():
         name = args[0]
         master, slave = os.openpty()
         slave_path = os.ttyname(slave)
-        self.sessions[name] = {'master': master, 'slave': slave_path, 'session': Session(master, ui, name)}
+        self.sessions[name] = Session(name, master, slave_path, ui)
         return slave_path
 
     def stop(self, args):
@@ -26,17 +26,18 @@ class GDBMI_rplugin():
         del self.sessions[name]
 
     def breakswitch(self, args):
-        filename, line = args
-        bp_id = self.session.breakpoints_status(filename, line)
+        session_name, filename, line = args
+        session = self.sessions[session_name]
+        bp_id = session.breakpoints_status(filename, line)
 
         if bp_id:
-            return "delete {}".format(bp_id)
+            return f"delete { bp_id }"
         else:
-            return "break {}:{}".format(filename, line)
+            return f"break { filename }:{ line }"
 
     def display(self, args):
-        expr = args[0]
-        self.session.add_display(expr)
+        session_name, expr = args
+        self.sessions[session_name].add_display(expr)
 
     def exec(self, args):
         def callback(**kwargs):

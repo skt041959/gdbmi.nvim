@@ -28,11 +28,11 @@ function! gdbmi#toggle_break()
   let l:filename = expand('#'.l:buf.':p')
   let l:line = line('.')
 
-  let l:cmd = gdbmi#util#rpcrequest('gdbmi_breaktoggle', l:filename, l:line)
+  let l:cmd = gdbmi#util#rpcrequest('gdbmi_breaktoggle', t:gdbmi_buf_name, l:filename, l:line)
 
   call gdbmi#send(l:cmd)
 endfunction
 
 function! gdbmi#display(expr)
-  call gdbmi#util#rpcnotify('gdbmi_display', a:expr)
+  call gdbmi#util#rpcnotify('gdbmi_display', t:gdbmi_buf_name, a:expr)
 endfunction

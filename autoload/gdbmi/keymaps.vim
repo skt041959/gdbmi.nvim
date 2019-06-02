@@ -72,7 +72,7 @@ function! gdbmi#keymaps#init()
 endfunction
 
 function! gdbmi#keymaps#dispatch_set()
-  if !exists("t:gdbmi_keymaps_config") | return | endif
+  if !exists('t:gdbmi_keymaps_config') | return | endif
   try
     call t:gdbmi_keymaps_config['set_keymaps']()
   catch /.*/
@@ -80,7 +80,7 @@ function! gdbmi#keymaps#dispatch_set()
 endfunction
 
 function! gdbmi#keymaps#dispatch_unset()
-  if !exists("t:gdbmi_keymaps_config") | return | endif
+  if !exists('t:gdbmi_keymaps_config') | return | endif
   try
     call t:gdbmi_keymaps_config['unset_keymaps']()
   catch /.*/

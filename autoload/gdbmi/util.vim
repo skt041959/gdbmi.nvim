@@ -60,27 +60,18 @@ function! gdbmi#util#jump(file, line, cursor) abort
   let l:mode = mode()
   exe t:gdbmi_win_jump_window.'wincmd w'
 
-  if has('nvim')
-    let l:winHandle = nvim_get_current_win()
-    if nvim_win_get_buf(l:winHandle) != l:target_buf
-      call nvim_win_set_buf(l:winHandle, l:target_buf)
-      exe 'normal! '.a:line.'G'
-      redraw
-      doautoall BufReadPost
-      doautoall BufEnter
-    else
-      if a:line <= line('w0') || a:line >= line('w$')
-        exe 'normal! '.a:line.'G'
-      endif
-    endif
+  if bufnr('%') != l:target_buf
+    let l:eventignore = &eventignore
+    set eventignore+=BufReadPost,BufEnter
+    exe 'buffer '. l:target_buf
+    exe 'normal! '. a:line.'G'
+    redraw
+    let &eventignore = l:eventignore
+    doautoall BufReadPost
+    doautoall BufEnter
   else
-    if bufnr('%') != l:target_buf
-      exe 'buffer '. l:target_buf
+    if a:line <= line('w0') || a:line >= line('w$')
       exe 'normal! '.a:line.'G'
-    else
-      if a:line <= line('w0') || a:line >= line('w$')
-        exe 'normal! '.a:line.'G'
-      endif
     endif
   endif
 
