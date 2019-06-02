@@ -21,7 +21,7 @@ class GDBMI_rplugin():
 
     def stop(self, args):
         name = args[0]
-        self.sessions[name]['session'].stop()
+        self.sessions[name].stop()
         del self.sessions[name]
 
     def breakswitch(self, args):

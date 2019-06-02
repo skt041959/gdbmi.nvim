@@ -115,13 +115,9 @@ function! gdbmi#init#Spawn(cmd) abort
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
   exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
-  if exists('#TermClose')
-    let l:autocmd = printf('autocmd %s TermClose %s call gdbmi#init#teardown(%d)',
-          \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
-  else
-    let l:autocmd = printf('autocmd %s BufDelete %s call gdbmi#init#teardown(%d)',
-          \ t:gdbmi_buf_name, t:gdbmi_buf_name, g:gdbmi_count)
-  endif
+  let l:autocmd = printf('autocmd %s %s %s call gdbmi#init#teardown(%d)',
+        \ t:gdbmi_buf_name, exists('#TermClose') ? 'TermClose' : 'BufDelete',
+        \ t:gdbmi_buf_name, g:gdbmi_count)
   exec l:autocmd
 
   let l:tty = s:StartGDBMI()
