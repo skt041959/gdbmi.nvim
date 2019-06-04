@@ -66,26 +66,28 @@ function! gdbmi#util#jump(file, line, cursor) abort
   let l:mode = mode()
 
   let s:gdbmi_enable_keymap_autocmd = 0
-  exe t:gdbmi_win_jump_window.'wincmd w'
 
-  if winbufnr(0) != l:target_buf
+  if winbufnr(t:gdbmi_win_jump_window) != l:target_buf
     let l:eventignore = &eventignore
     set eventignore+=BufReadPost,BufEnter
+    exe t:gdbmi_win_jump_window.'wincmd w'
     exe 'buffer '. l:target_buf
     exe 'normal! '. a:line.'G'
     redraw
     let &eventignore = l:eventignore
     doautoall BufReadPost
     doautoall BufEnter
+    exe l:window.'wincmd w'
   else
+    exe 'noautocmd '.t:gdbmi_win_jump_window.'wincmd w'
     if a:line <= line('w0') || a:line >= line('w$')
       exe 'normal! '.a:line.'G'
     endif
+    exe 'noautocmd '.l:window.'wincmd w'
   endif
 
   let t:gdbmi_win_current_buf = l:target_buf
   let t:gdbmi_new_cursor_line = a:line
-  exe l:window.'wincmd w'
   let s:gdbmi_enable_keymap_autocmd = 1
   if l:mode ==? 't' || l:mode ==? 'i'
     startinsert
