@@ -77,6 +77,7 @@ function! gdbmi#util#jump(file, line, cursor) abort
     let &eventignore = l:eventignore
     doautoall BufReadPost
     doautoall BufEnter
+    set buflisted
     exe l:window.'wincmd w'
   else
     exe 'noautocmd '.t:gdbmi_win_jump_window.'wincmd w'

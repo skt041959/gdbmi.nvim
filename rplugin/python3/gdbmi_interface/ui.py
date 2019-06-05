@@ -24,11 +24,14 @@ class UI:
     def del_cursor(self, thread_group_id):
         pass
 
-    def display(self, context):
-        self.vim.async_call(lambda: self.vim.call('gdbmi#display#display'), context)
+    def float_display(self, context):
+        self.vim.async_call(lambda: self.vim.call('gdbmi#display#float_display'), context)
+
+    def virtual_display(self, context):
+        self.vim.call('gdbmi#display#virtual_display', context)
 
     def async_error(self, msg):
-        self.vim.async_call()
+        self.vim.async_call('gdbmi#util#print_error', msg)
 
     def error(self, msg):
         self.vim.call('gdbmi#util#print_error', msg)

@@ -24,7 +24,7 @@ function! gdbmi#display#init() abort
   call remove(t:gdbmi_float_window_opts, 'height_percent')
 endfunction
 
-function! gdbmi#display#display(context) abort
+function! gdbmi#display#float_display(context) abort
   let l:buf = get(g:gdbmi_float_window_bufs, a:context['type'], -1)
   if l:buf < 0
     let g:gdbmi_float_window_bufs[a:context['type']] = nvim_create_buf(v:false, v:true)
@@ -58,4 +58,7 @@ function! gdbmi#display#close_float() abort
 
   call nvim_win_close(g:gdbmi_float_window, 1)
   let g:gdbmi_float_window = -1
+endfunction
+
+function! gdbmi#display#virtual_display(context) abort
 endfunction

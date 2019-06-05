@@ -72,7 +72,7 @@ class Session(object):
 
         return self.token
 
-    @log_exceptions(logger)
+    #  @log_exceptions(logger)
     def read_task(self, *args):
         line = self.gdbmi.readline()
         if not line:
@@ -289,21 +289,19 @@ class Session(object):
         #  enable_count = bkpt_new.pop('enable', None)
         enabled = bkpt_new.pop('enabled', None)
 
+        number = bkpt['number']
         if condition:
-            token = self._send(' '.join(['-break-condition', bkpt['number'], condition]))
-
+            token = self._send(f"-break-condition {number} {condition}")
         if ignore_count:
-            token = self._send(' '.join(['-break-after', bkpt['number'], ignore_count]))
-
-        if enabled != bkpt['enabled']:
-            if enabled == 'y':
-                token = self._send('-break-enable '+bkpt['number'])
-            elif enabled == 'n':
-                token = self._send('-break-disable '+bkpt['number'])
+            token = self._send(f"-break-after {number} {ignore_count}")
+        if enabled == 'y' and bkpt['enabled'] == 'n':
+            token = self._send(f'-break-enable {number}')
+        elif enabled == 'n' and bkpt['enabled'] == 'y':
+            token = self._send(f'-break-disable {number}')
 
     def do_exec(self, cmd, *args, callback=None):
         if cmd in ('run', 'next', 'step', 'continue', 'finish',
-                       'next-instruction', 'step-instruction'):
+                   'next-instruction', 'step-instruction'):
             token = self._send("-exec-" + cmd + " " + " ".join(args), exec_callback=callback)
             return token
 
@@ -332,7 +330,6 @@ class Session(object):
 
         breakpoints = list(filter(lambda x: all((x[k] == v for k,v in kwargs.items())),
                                   self.breakpoints.values()))
-
         return breakpoints
 
     def add_display(self, expr):
@@ -359,14 +356,11 @@ class Session(object):
         async def one_expr(token, ev, frame, values):
             await ev.wait()
             obj = self.commands[token]['result']
-            values.setdefault(frame['addr'], []).append(obj.results)
+            values.setdefault(frame['addr'], []).append(obj.results if obj.result_class == 'done' else None)
             self.debug(values)
-            return token
 
         coros = [one_expr(token, *t_values) for token, t_values in result.items()]
-        doneset = asyncio.gather(*coros)
-        self.debug(doneset)
-        #  show_perf(lambda : asyncio.gather(*coros))
+        asyncio.gather(*coros)
         #  task = asyncio.ensure_future(asyncio.gather(*coros))
         #  task.add_done_callback(lambda : self.debug("all expr get value"))
 
