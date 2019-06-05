@@ -50,6 +50,18 @@ function! gdbmi#util#on_BufLeave() abort
   call gdbmi#keymaps#dispatch_unset()
 endfunction
 
+function! gdbmi#util#on_BufWinEnter() abort
+  if t:gdbmi_buf_name ==# expand('<afile>')
+    let t:gdbmi_gdb_win = win_getid()
+  endif
+endfunction
+
+function! gdbmi#util#on_BufHidden() abort
+  if t:gdbmi_buf_name ==# expand('<afile>')
+    let t:gdbmi_gdb_win = 0
+  endif
+endfunction
+
 function! gdbmi#util#clear_sign() abort
   call gdbmi#util#clear_cursor_sign()
   call gdbmi#util#clear_breakpoint_sign()
@@ -149,6 +161,16 @@ function! gdbmi#util#get_selection(...) abort
   let l:lines[-1] = l:lines[-1][: l:col2 - (&selection ==? 'inclusive' ? 1 : 2)]
   let l:lines[0] = l:lines[0][l:col1 - 1:]
   return join(l:lines, "\n")
+endfunction
+
+function! gdbmi#util#bringupgdb() abort
+  if !empty(t:gdbmi_gdb_win)
+    call win_gotoid(t:gdbmi_gdb_win)
+    startinsert
+    return
+  else
+    exe 'botright split '.t:gdbmi_buf_name.'| wincmd b | startinsert'
+  endif
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort

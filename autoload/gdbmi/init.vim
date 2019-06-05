@@ -109,6 +109,8 @@ function! gdbmi#init#Spawn(cmd) abort
       autocmd!
       autocmd BufEnter * call gdbmi#util#on_BufEnter()
       autocmd BufLeave * call gdbmi#util#on_BufLeave()
+      autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
+      autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
     augroup END
   endif
   let g:gdbmi_count += 1
@@ -138,7 +140,8 @@ function! gdbmi#init#Spawn(cmd) abort
   endif
 
   exec 'file '. t:gdbmi_buf_name
-  exec 'startinsert'
+  let t:gdbmi_gdb_win = win_getid()
+  startinsert
 endfunction
 
 function! gdbmi#init#teardown(count)

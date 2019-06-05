@@ -9,6 +9,7 @@ let s:default_config = {
       \ 'key_framedown':    '<leader>dD',
       \ 'key_eval':         '<leader>de',
       \ 'key_ui_display':   '<leader>dw',
+      \ 'key_ui_bringupgdb':  '<F7>',
       \ 'set_keymaps': function('gdbmi#keymaps#set'),
       \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
@@ -28,13 +29,22 @@ let s:default_keymaps = [
       \ ['v', 'key_ui_display',':GDBMIDisplayRange'],
       \ ]
 
+let s:default_plug_keymaps = [
+      \ ['n', 'key_ui_bringupgdb', '<plug>GDBMIBringupGDB'],
+      \ ]
+
 function! gdbmi#keymaps#set()
   for keymap in s:default_keymaps
-    if has_key(t:gdbmi_keymaps_config, keymap[1])
-      let key = t:gdbmi_keymaps_config[keymap[1]]
-      if !empty(key)
-        exe keymap[0].'noremap <buffer> <silent> '.key.' '.keymap[2]'<cr>'
-      endif
+    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
+    if !empty(key)
+      exe keymap[0].'noremap <buffer> <silent> '.key.' '.keymap[2]'<cr>'
+    endif
+  endfor
+
+  for keymap in s:default_plug_keymaps
+    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
+    if !empty(key)
+      exe keymap[0].'map <buffer> <silent> '.key.' '.keymap[2]
     endif
   endfor
 endfunction
@@ -69,6 +79,8 @@ function! gdbmi#keymaps#init()
   endfor
 
   let t:gdbmi_keymaps_config = l:config
+
+  noremap <plug>GDBMIBringupGDB :call gdbmi#util#bringupgdb()<CR>
 endfunction
 
 function! gdbmi#keymaps#dispatch_set()
