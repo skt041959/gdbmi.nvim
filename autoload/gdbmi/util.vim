@@ -144,8 +144,11 @@ endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id) abort
   let l:sid = 5000 + a:id
-  call remove(t:gdbmi_breakpoints_sign_ids, index(t:gdbmi_breakpoints_sign_ids, l:sid))
-  exec 'sign unplace '.l:sid
+  let l:idx = index(t:gdbmi_breakpoints_sign_ids, l:sid)
+  if l:idx > 0
+    call remove(t:gdbmi_breakpoints_sign_ids, l:idx)
+    exec 'sign unplace '.l:sid
+  endif
 endfunction
 
 function! gdbmi#util#clear_breakpoint_sign() abort
@@ -166,11 +169,10 @@ endfunction
 function! gdbmi#util#bringupgdb() abort
   if !empty(t:gdbmi_gdb_win)
     call win_gotoid(t:gdbmi_gdb_win)
-    startinsert
-    return
   else
-    exe 'botright split '.t:gdbmi_buf_name.'| wincmd b | startinsert'
+    exe 'botright split '.t:gdbmi_buf_name.'| wincmd b'
   endif
+  startinsert
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort

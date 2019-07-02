@@ -143,16 +143,8 @@ class Session(object):
             tg['library'][obj.results['id']] = obj.results
             return True
 
-        elif obj.name == "breakpoint-modified":
-            self._update_breakpoint(obj.results['bkpt'])
-            return True
-
-        elif obj.name == "breakpoint-created":
-            self._update_breakpoint(obj.results['bkpt'], new=True)
-            return True
-
-        elif obj.name == "breakpoint-deleted":
-            self._update_breakpoint(None, number=obj.results['id'])
+        elif obj.name.startswith('breakpoint-'):
+            self._update_breakpoint(obj)
 
     def _handle_async_exe(self, token, obj, kwargs):
         self.exec_state = obj.name
@@ -214,19 +206,16 @@ class Session(object):
             tmp_kwds.update(to_call)
             to_call['proc'](tmp_kwds)
 
-    def _update_breakpoint(self, info, number = None, new=False):
-        if number is None:
-            number = info['number']
-        self.debug(info)
-
-        if info is None:
-            self.breakpoints.pop(number)
-            self.ui.del_breakpoint(int(number))
-            return
-
-        self.breakpoints.setdefault(number, {}).update(info)
-        if new and 'fullname' in info:
-            self.ui.set_breakpoint(int(number), info['fullname'], info['line'])
+    def _update_breakpoint(self, obj):
+        if obj.name == "breakpoint-deleted":
+            info = self.breakpoints.pop(obj['id'], {})
+            if 'fullname' in info:
+                self.ui.del_breakpoint(int(obj['id']))
+        else:
+            info = obj['bkpt']
+            self.breakpoints.setdefault(info['number'], {}).update(info)
+            if obj.name == "breakpoint-created" and 'fullname' in info:
+                self.ui.set_breakpoint(int(info['number']), info['fullname'], info['line'])
 
     def breakpoints_status(self, filename, line):
         for number, bkpt in self.breakpoints.items():
