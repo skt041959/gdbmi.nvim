@@ -18,6 +18,19 @@ You can use MingW Python or use Cygwin environment.
 - [x] support vim8
 - [ ] show locals in float window
 
+## default keymap
+
+| Mapping | Command | Description|
+|---------|---------|------------|
+|`<leader>dn`|:GDBMINext| `next`|
+|`<leader>ds`|:GDBMIStep| `step`|
+|`<leader>dc`|:GDBMIContinue| `continue`|
+|`<leader>df`|:GDBMIFinish| `finish`|
+|`<leader>db`|:GDBMIBreakpointToggle| `break`|
+|`<leader>dU`|:GDBMIFramup| `up`|
+|`<leader>dD`|:GDBMIFramdown| `down`|
+|`<leader>de`|:GDBMIEvalWord| `print <cword>`|
+
 
 ## inspire
 
