@@ -31,6 +31,23 @@ You can use MingW Python or use Cygwin environment.
 |`<leader>dD`|:GDBMIFramdown| `down`|
 |`<leader>de`|:GDBMIEvalWord| `print <cword>`|
 
+## change keymap
+
+``` viml
+let g:gdbmi_config = {
+      \ 'key_until':        '<leader>du',
+      \ 'key_continue':     '<leader>dc',
+      \ 'key_next':         '<leader>dn',
+      \ 'key_step':         '<leader>ds',
+      \ 'key_finish':       '<leader>df',
+      \ 'key_breakpoint':   '<leader>db',
+      \ 'key_frameup':      '<leader>dU',
+      \ 'key_framedown':    '<leader>dD',
+      \ 'key_eval':         '<leader>de',
+      \ 'key_ui_display':   '<leader>dw',
+      \ 'key_ui_bringupgdb':  '<F7>',
+      \ }
+```
 
 ## inspire
 
