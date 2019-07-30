@@ -111,15 +111,27 @@ class GDBOutputParse:
 
         while self._accept("COMMA"):
             var, value = self.result()
-            results[var] = value
+            if var:
+                results[var] = value
+            elif len(results) == 1:
+                k, v = results.popitem()
+                if isinstance(v, list):
+                    v.append(value)
+                    results[k] = v
+                else:
+                    results[k] = [v, value]
+            else:
+                raise ParseError(repr(value))
 
         return results
 
     def result(self):
         if self._accept("VARIABLE"):
             var = self.tok.value
+        elif self._test("L_TUPLE"):
+            var = None
         else:
-            raise ParseError(self.tok)
+            raise ParseError(repr(self.tok) + repr(self.nexttok))
 
         value = self.value()
 
@@ -215,7 +227,6 @@ class GDBOutputParse:
     def _advance(self):
         self.tok, self.nexttok = self.nexttok, next(self.tokens, None)
         self.debug(repr(self.tok))
-        #  print(self.tok)
 
     def _accept(self, toktype):
         if self.nexttok and self.nexttok.type == toktype:
@@ -223,6 +234,9 @@ class GDBOutputParse:
             return True
         else:
             return False
+
+    def _test(self, toktype):
+        return self.nexttok.type == toktype
 
 
 def test(output):
@@ -248,8 +262,10 @@ if __name__ == "__main__":
     test1 = r'*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"' + '\n'
     test2 = r'0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},state="stopped",core="1"}],current-thread-id="1"' + '\n'
     test3 = r'*stopped,reason="end-stepping-range",frame={addr="0x0000000000411e80",func="callParallel_calculate",args=[{name="outputFilePath",value="\"./temp_data_www_2.dat\""},{name="save_png",value="true"}],file="/home/skt/code/freeformed_surface/src/generate_dat.cpp",fullname="/home/skt/code/freeformed_surface/src/generate_dat.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"' + '\n'
+    test4 = r'=breakpoint-created,bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<MULTIPLE>",times="0",original-location="npLocalHotSpotDetection"},{number="1.1",enabled="y",addr="0x000000000a1b7fa1",func="npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int, std::basic_ofstream<char, std::char_traits<char> >&, bool)",file="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",fullname="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",line="7048",thread-groups=["i1"]},{number="1.2",enabled="y",addr="0x000000000a1b96e8",func="npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int)",file="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",fullname="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",line="7271",thread-groups=["i1"]},{number="1.3",enabled="y",addr="0x00002b07f6e52c40",at="<npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int)@plt>",thread-groups=["i1"]}' + '\n'
     #  main(sys.argv[1])
     test(test1)
     test(test2)
     test(test3)
+    test(test4)
 
