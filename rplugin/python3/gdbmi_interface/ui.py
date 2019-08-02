@@ -11,7 +11,7 @@ class UI:
 
     def jump_frame(self, frame):
         if 'fullname' in frame:
-            self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump', frame['fullname'], frame['line'], 1))
+            self.vim.async_call(lambda : self.vim.call('gdbmi#util#jump_frame', frame['fullname'], frame['line']))
         else:
             self.vim.async_call(lambda : self.vim.call('gdbmi#util#clear_cursor_sign'))
 

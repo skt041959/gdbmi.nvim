@@ -1,6 +1,7 @@
 import os
 import fcntl
 import asyncio
+import pprint
 
 from subprocess import Popen, PIPE
 
@@ -208,14 +209,28 @@ class Session(object):
 
     def _update_breakpoint(self, obj):
         if obj.name == "breakpoint-deleted":
-            info = self.breakpoints.pop(obj['id'], {})
+            info = self.breakpoints.pop(obj.results['id'], {})
             if 'fullname' in info:
-                self.ui.del_breakpoint(int(obj['id']))
+                self.ui.del_breakpoint(int(info['number']))
+            if 'multi' in info:
+                for i in info['multi']:
+                    self.ui.del_breakpoint(int(i['number'].replace('.', '')))
         else:
-            info = obj['bkpt']
-            self.breakpoints.setdefault(info['number'], {}).update(info)
-            if obj.name == "breakpoint-created" and 'fullname' in info:
-                self.ui.set_breakpoint(int(info['number']), info['fullname'], info['line'])
+            info = obj.results['bkpt']
+            if isinstance(info, list):
+                d = self.breakpoints.setdefault(info[0]['number'], {})
+                d.update(info[0])
+                d['multi'] = info[1:]
+                if obj.name == "breakpoint-created":
+                    for i in info[1:]:
+                        if 'fullname' in i:
+                            self.debug("set_breakpoint %s:%s", i['fullname'], i['line'])
+                            self.ui.set_breakpoint(int(i['number'].replace('.', '')), i['fullname'], i['line'])
+            else:
+                self.breakpoints.setdefault(info['number'], {}).update(info)
+                if obj.name == "breakpoint-created" and 'fullname' in info:
+                    self.ui.set_breakpoint(int(info['number']), info['fullname'], info['line'])
+                    self.ui.jump(info['fullname'], info['line'])
 
     def breakpoints_status(self, filename, line):
         for number, bkpt in self.breakpoints.items():

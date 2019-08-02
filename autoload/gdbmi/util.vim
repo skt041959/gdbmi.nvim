@@ -67,11 +67,7 @@ function! gdbmi#util#clear_sign() abort
   call gdbmi#util#clear_breakpoint_sign()
 endfunction
 
-function! gdbmi#util#jump(file, line, cursor) abort
-  if !filereadable(a:file)
-    call gdbmi#util#clear_cursor_sign()
-    return
-  endif
+function! gdbmi#util#jump(file, line) abort
   let l:target_buf = bufnr(a:file, 1)
 
   let l:window = winnr()
@@ -99,33 +95,36 @@ function! gdbmi#util#jump(file, line, cursor) abort
     exe 'noautocmd '.l:window.'wincmd w'
   endif
 
-  let t:gdbmi_win_current_buf = l:target_buf
-  let t:gdbmi_new_cursor_line = a:line
   let s:gdbmi_enable_keymap_autocmd = 1
   if l:mode ==? 't' || l:mode ==? 'i'
     startinsert
   endif
-
-  if a:cursor
-    call gdbmi#util#set_cursor_sign()
-  endif
 endfunction
 
-function! gdbmi#util#set_cursor_sign() abort
+function! gdbmi#util#jump_frame(file, line) abort
+  if !filereadable(a:file)
+    call gdbmi#util#clear_cursor_sign()
+    return
+  endif
+  call gdbmi#util#jump(a:file, a:line)
+  call gdbmi#util#set_cursor_sign(a:file, a:line)
+endfunction
+
+function! gdbmi#util#set_cursor_sign(file, line) abort
   let l:old = t:gdbmi_cursor_sign_id
+
+  let t:gdbmi_win_current_buf = bufnr(a:file, 1)
+  let t:gdbmi_new_cursor_line = a:line
+
   let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
-  let l:current_buf = t:gdbmi_win_current_buf
-  if t:gdbmi_new_cursor_line != -1 && l:current_buf != -1
+  if t:gdbmi_new_cursor_line != -1 && t:gdbmi_win_current_buf != -1
     let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%d buffer=%d',
-          \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, l:current_buf)
+          \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, t:gdbmi_win_current_buf)
     exec l:cmd
   endif
   if l:old != -1
     exe 'sign unplace '.l:old
   endif
-
-  " FIXME: not been redrawed in nvim-0.4 nightly build
-  redraw
 endfunction
 
 function! gdbmi#util#clear_cursor_sign() abort
@@ -135,7 +134,7 @@ function! gdbmi#util#clear_cursor_sign() abort
 endfunction
 
 function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
-  let l:buf = gdbmi#util#jump(a:file, a:line, 0)
+  let l:target_buf = bufnr(a:file, 1)
   let l:sid = 5000 + a:id
   call add(t:gdbmi_breakpoints_sign_ids, l:sid)
   let l:cmd = printf('sign place %d name=GdbmiBreakpoint line=%s file=%s', l:sid, a:line, a:file)
