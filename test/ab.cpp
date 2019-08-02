@@ -1,0 +1,51 @@
+#include <stdio.h>
+#include <signal.h>
+
+long seqsum(long n) {
+    long ret = 0;
+    int i;
+    for(i=0; i<n; i++)
+    {
+        ret = 0;
+        int j = 0;
+        for(j=0; j<n; j++)
+        {
+            ret += 1;
+        }
+        printf("n: %ld\n", n);
+    }
+    return ret;
+}
+
+long seqsum(long n, long m) {
+    long ret = 0;
+    for(int i=0; i<n; i++)
+    {
+        ret = 0;
+        for(int j=0; j<m; j++)
+        {
+            ret += 1;
+        }
+        printf("n: %ld\n", n);
+    }
+    return ret;
+}
+
+int main () {
+    long a, b;
+
+    printf("Hello world\n");
+
+    printf("Enter a number:\n");
+    // scanf("%ld", &a);
+    a = 1000000;
+
+    raise(SIGTSTP);
+
+    b = seqsum(a);
+    b = seqsum(a, 100);
+
+    printf("%ld\n", b);
+
+    return 0;
+}
