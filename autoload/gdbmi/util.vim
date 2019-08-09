@@ -144,7 +144,7 @@ endfunction
 function! gdbmi#util#del_breakpoint_sign(id) abort
   let l:sid = 5000 + a:id
   let l:idx = index(t:gdbmi_breakpoints_sign_ids, l:sid)
-  if l:idx > 0
+  if l:idx >= 0
     call remove(t:gdbmi_breakpoints_sign_ids, l:idx)
     exec 'sign unplace '.l:sid
   endif
@@ -154,6 +154,7 @@ function! gdbmi#util#clear_breakpoint_sign() abort
   for id in t:gdbmi_breakpoints_sign_ids
     exe 'sign unplace '.id
   endfor
+  let t:gdbmi_breakpoints_sign_ids = []
 endfunction
 
 function! gdbmi#util#get_selection(...) abort
