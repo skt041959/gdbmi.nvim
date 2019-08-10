@@ -1,5 +1,9 @@
 function! gdbmi#send_line(cmd)
-  call jobsend(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
+  if has('nvim')
+    call jobsend(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
+  else
+    call term_sendkeys(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
+  endif
 endfunction
 
 function! gdbmi#interrupt()

@@ -41,7 +41,7 @@ function! s:StartGDBMI()
   if gdbmi#util#has_yarp()
     try
       let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
-      let l:tty = t:gdbmi_yarp.request('_gdbmi_start')
+      let l:tty = t:gdbmi_yarp.request('_gdbmi_start', t:gdbmi_buf_name)
       let g:gdbmi#_channel_id = 1
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
       return l:tty
@@ -136,7 +136,9 @@ function! gdbmi#init#Spawn(cmd) abort
   if has('nvim')
     let t:gdbmi_gdb_job_id = termopen(l:cmd)
   else
-    let t:gdbmi_gdb_job_id = term_start(l:cmd, {'curwin': 1})
+    let t:gdbmi_gdb_buf_name = term_start(l:cmd, {'curwin': 1})
+    let t:gdbmi_gdb_buf_id = bufnr(t:gdbmi_gdb_buf_name)
+    let t:gdbmi_gdb_job_id = t:gdbmi_gdb_buf_id
   endif
 
   exec 'file '. t:gdbmi_buf_name
