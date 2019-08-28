@@ -70,9 +70,6 @@ endfunction
 function! gdbmi#util#jump(file, line) abort
   let l:target_buf = bufnr(a:file, 1)
 
-  let l:window = winnr()
-  let l:mode = mode()
-
   let s:gdbmi_enable_keymap_autocmd = 0
 
   if winbufnr(t:gdbmi_win_jump_window) != l:target_buf
@@ -86,19 +83,16 @@ function! gdbmi#util#jump(file, line) abort
     doautoall BufReadPost
     doautoall BufEnter
     set buflisted
-    exe l:window.'wincmd w'
+    exe winnr('#').'wincmd w'
   else
     exe 'noautocmd '.t:gdbmi_win_jump_window.'wincmd w'
     if a:line <= line('w0') || a:line >= line('w$')
       exe 'normal! '.a:line.'G'
     endif
-    exe 'noautocmd '.l:window.'wincmd w'
+    exe 'noautocmd '.winnr('#').'wincmd w'
   endif
 
   let s:gdbmi_enable_keymap_autocmd = 1
-  if l:mode ==? 't' || l:mode ==? 'i'
-    startinsert
-  endif
 endfunction
 
 function! gdbmi#util#jump_frame(file, line) abort
