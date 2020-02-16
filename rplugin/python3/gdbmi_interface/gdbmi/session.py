@@ -5,17 +5,12 @@ import pprint
 
 from subprocess import Popen, PIPE
 
-from gdbmi_interface.log import getLogger, log_exceptions
 from gdbmi_interface.gdbmi.parse import GDBOutputParse, ParseError
 from gdbmi_interface.gdbmi.parse import ResultRecord, AsyncRecord, StreamRecord
-from gdbmi_interface.util import show_perf
-
-
-logger = getLogger(__name__)
+from gdbmi_interface.log import getLogger, log_exceptions
 
 
 class Session(object):
-    debug, info, warn, error = (logger.debug, logger.info, logger.warn, logger.error)
 
     def __init__(self, name, gdbmi_interface_fd, slave_path, ui):
         self.name = name
@@ -41,6 +36,8 @@ class Session(object):
         loop = asyncio.get_event_loop()
         loop.add_reader(self.gdbmi_interface_fd, self.read_task)
 
+        logger = getLogger(__name__)
+        self.debug, self.info, self.warn, self.error = (logger.debug, logger.info, logger.warn, logger.error)
         self.debug("Session launched")
 
     def _launch_gdb(self, debuggee, gdb):

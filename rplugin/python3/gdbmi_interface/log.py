@@ -1,22 +1,45 @@
 import os
 import logging
-import logging.handlers
+from logging.config import dictConfig
+from logging.handlers import WatchedFileHandler
 import traceback
 import inspect
 import sys
 
 
-logger = logging.getLogger("gdbmi")
-
-log_format = '%(asctime)s %(levelname)-8s [%(process)d] (%(name)s) %(message)s'
-formatter = logging.Formatter(log_format)
-handler = logging.handlers.WatchedFileHandler(filename="/tmp/gdbmi_log")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+class GdbmiLogFileHandler(WatchedFileHandler):    
+    def _open(self):
+        prevumask=os.umask(0o066)
+        rtv=super()._open(self)
+        os.umask(prevumask)
+        return rtv
 
 
 def getLogger(name):
+    d = {
+        'version': 1,
+        'formatters': {
+            'gdbmi': {
+                'class': 'logging.Formatter',
+                'format': '%(asctime)s %(levelname)-8s [%(process)d] (%(name)s) %(message)s'
+            }
+        },
+        'handlers': {
+            'file': {
+                'class': 'logging.handlers.WatchedFileHandler',
+                'filename': f"/tmp/gdbmi_log_{os.getpid()}",
+                'formatter': 'gdbmi'
+            }
+        },
+        'loggers': {
+            'gdbmi': {
+                'handlers': ['file'],
+                'level': 'DEBUG'
+            }
+        },
+    }
+    dictConfig(d)
+    logger = logging.getLogger("gdbmi")
     return logger.getChild(name)
 
 
