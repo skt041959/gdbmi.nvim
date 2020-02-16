@@ -69,30 +69,16 @@ endfunction
 
 function! gdbmi#util#jump(file, line) abort
   let l:target_buf = bufnr(a:file, 1)
-
-  let s:gdbmi_enable_keymap_autocmd = 0
-
-  if winbufnr(t:gdbmi_win_jump_window) != l:target_buf
-    let l:eventignore = &eventignore
-    set eventignore+=BufReadPost,BufEnter
-    exe t:gdbmi_win_jump_window.'wincmd w'
-    exe 'buffer '. l:target_buf
-    exe 'normal! '. a:line.'G'
-    redraw
-    let &eventignore = l:eventignore
-    doautoall BufReadPost
-    doautoall BufEnter
-    set buflisted
-    exe winnr('#').'wincmd w'
-  else
-    exe 'noautocmd '.t:gdbmi_win_jump_window.'wincmd w'
-    if a:line <= line('w0') || a:line >= line('w$')
-      exe 'normal! '.a:line.'G'
-    endif
-    exe 'noautocmd '.winnr('#').'wincmd w'
+  let l:target_win = bufwinid(l:target_buf)
+  if l:target_win == -1
+    let l:target_win = win_getid(t:gdbmi_win_jump_window)
   endif
 
-  let s:gdbmi_enable_keymap_autocmd = 1
+  if nvim_win_get_buf(l:target_win) != l:target_buf
+    call nvim_win_set_buf(l:target_win, l:target_buf)
+  endif
+
+  call nvim_win_set_cursor(l:target_win, [str2nr(a:line), 1])
 endfunction
 
 function! gdbmi#util#jump_frame(file, line) abort
