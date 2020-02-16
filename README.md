@@ -1,7 +1,7 @@
 # gdbmi.nvim
 
 
-## description
+## Description
 This is a plugin for Neovim to integrate with GDB. It's not stable yet, might have some bugs.
 
 This plugin use the power of Neovim remote plugin and GDB's new-ui command.
@@ -12,26 +12,36 @@ Currently, it doesn't support Native Python executable in Windows system, which 
 You can use MingW Python or use Cygwin environment.
 
 
-## features
+## Features
 - [x] keymap
 - [x] line hint
 - [x] support vim8
 - [ ] show locals in float window
 
-## default keymap
+## Get started
 
-| Mapping | Command | Description|
-|---------|---------|------------|
+`:GDBMILaunch /usr/bin/gdb a.out`
+
+or launch with any argument
+
+`:GDBMILaunch /usr/bin/gdb --pid 'pid'`
+
+## Keymap
+
+| Default Mapping | Command | Description|
+|-----------------|---------|------------|
 |`<leader>dn`|:GDBMINext| `next`|
 |`<leader>ds`|:GDBMIStep| `step`|
 |`<leader>dc`|:GDBMIContinue| `continue`|
+|`<leader>da`|:GDBMIAdvance| `advance`|
+|`<leader>du`|:GDBMIUntil| `until`|
 |`<leader>df`|:GDBMIFinish| `finish`|
 |`<leader>db`|:GDBMIBreakpointToggle| `break`|
-|`<leader>dU`|:GDBMIFramup| `up`|
-|`<leader>dD`|:GDBMIFramdown| `down`|
+|`<leader>dU`|:GDBMIFrameUp| `up`|
+|`<leader>dD`|:GDBMIFrameDown| `down`|
 |`<leader>de`|:GDBMIEvalWord| `print <cword>`|
 
-## change keymap
+### Change keymap
 
 ``` viml
 let g:gdbmi_config = {
@@ -49,7 +59,12 @@ let g:gdbmi_config = {
       \ }
 ```
 
-## inspire
+## To-do
+- fix bringing up gdb in different tabpage
+- fix BufReadPost event in new buffer
+- add support for multi inferior
+
+## Inspire
 
 + [nvim-gdb](https://github.com/sakhnik/nvim-gdb)
 + [lldb.nvim](https://github.com/critiqjo/lldb.nvim)
