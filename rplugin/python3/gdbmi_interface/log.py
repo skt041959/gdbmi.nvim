@@ -7,14 +7,6 @@ import inspect
 import sys
 
 
-class GdbmiLogFileHandler(WatchedFileHandler):    
-    def _open(self):
-        prevumask=os.umask(0o066)
-        rtv=super()._open(self)
-        os.umask(prevumask)
-        return rtv
-
-
 def getLogger(name):
     d = {
         'version': 1,
@@ -38,7 +30,9 @@ def getLogger(name):
             }
         },
     }
+    prevumask=os.umask(0o066)
     dictConfig(d)
+    os.umask(prevumask)
     logger = logging.getLogger("gdbmi")
     return logger.getChild(name)
 
