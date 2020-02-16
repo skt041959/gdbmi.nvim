@@ -1,5 +1,6 @@
 let s:default_config = {
       \ 'key_until':        '<leader>du',
+      \ 'key_advance':      '<leader>da',
       \ 'key_continue':     '<leader>dc',
       \ 'key_next':         '<leader>dn',
       \ 'key_step':         '<leader>ds',
@@ -16,6 +17,7 @@ let s:default_config = {
 
 let s:default_keymaps = [
       \ ['n', 'key_until',    ':GDBMIUntil'],
+      \ ['n', 'key_advance',  ':GDBMIAdvance'],
       \ ['n', 'key_continue', ':GDBMIContinue'],
       \ ['n', 'key_next',     ':GDBMINext'],
       \ ['n', 'key_step',     ':GDBMIStep'],
@@ -37,7 +39,7 @@ function! gdbmi#keymaps#set()
   for keymap in s:default_keymaps
     let key = get(t:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
-      exe keymap[0].'noremap <buffer> <silent> '.key.' '.keymap[2]'<cr>'
+      exe keymap[0].'noremap <buffer> <silent> '.key.' '.keymap[2].'<cr>'
     endif
   endfor
 

@@ -5,6 +5,7 @@ function! s:UndefCommands()
   delcommand GDBMIBreakpointToggle
   delcommand GDBMIRun
   delcommand GDBMIUntil
+  delcommand GDBMIAdvance
   delcommand GDBMIContinue
   delcommand GDBMINext
   delcommand GDBMIStep
@@ -21,6 +22,7 @@ function! s:DefineCommands()
   command! GDBMIBreakpointToggle call gdbmi#toggle_break()
   command! GDBMIRun call gdbmi#send('run')
   command! GDBMIUntil call gdbmi#send('until ' . line('.'))
+  command! GDBMIAdvance call gdbmi#send('advance '.expand('<cword>'))
   command! GDBMIContinue call gdbmi#send('c')
   command! GDBMINext call gdbmi#send('n')
   command! GDBMIStep call gdbmi#send('s')
