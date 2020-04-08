@@ -24,7 +24,11 @@ if hasattr(vim, 'plugin'):
 
         @vim.function('_gdbmi_start', sync=True)
         def gdbmi_start(self, args):
-            return self.rplugin.start(args)
+            self.rplugin.start(args)
+
+        @vim.rpc_export('gdbmi_getslave', sync=True)
+        def gdbmi_getslave(self, args):
+            return self.rplugin.getSlave(args)
 
         @vim.rpc_export('gdbmi_breaktoggle', sync=True)
         def breakswitch(self, args):
@@ -42,7 +46,7 @@ if hasattr(vim, 'plugin'):
         def stop(self, args):
             self.rplugin.stop(args)
 
-if find_spec('yarp'):
+elif find_spec('yarp'):
 
     gdbmi = GDBMI_rplugin(vim)
 

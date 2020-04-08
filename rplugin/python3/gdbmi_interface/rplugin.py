@@ -17,7 +17,9 @@ class GDBMI_rplugin():
         master, slave = os.openpty()
         slave_path = os.ttyname(slave)
         self.sessions[name] = Session(name, master, slave_path, ui)
-        return slave_path
+
+    def getSlave(self, args):
+        return self.sessions[args[0]].slave_path
 
     def stop(self, args):
         name = args[0]

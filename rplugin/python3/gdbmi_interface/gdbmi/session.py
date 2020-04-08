@@ -38,7 +38,7 @@ class Session(object):
 
         logger = getLogger(__name__)
         self.debug, self.info, self.warn, self.error = (logger.debug, logger.info, logger.warn, logger.error)
-        self.debug("Session launched")
+        self.debug(f"Session launched {name} {gdbmi_interface_fd} {slave_path}")
 
     def _launch_gdb(self, debuggee, gdb):
         p = Popen(bufsize = 0,

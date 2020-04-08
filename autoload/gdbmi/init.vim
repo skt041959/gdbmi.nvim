@@ -61,9 +61,9 @@ function! s:StartGDBMI()
     endtry
   else
     try
-      let l:tty = _gdbmi_start(t:gdbmi_buf_name)
+      call _gdbmi_start(t:gdbmi_buf_name)
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
-      return l:tty
+      return gdbmi#util#rpcrequest('gdbmi_getslave', t:gdbmi_buf_name)
     catch
       call gdbmi#util#print_error(
             \ 'gdbmi.nvim failed to load. '
@@ -120,12 +120,18 @@ function! gdbmi#init#Spawn(cmd) abort
 
   exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
   let l:autocmd = printf('autocmd %s %s %s call gdbmi#init#teardown(%d)',
-        \ t:gdbmi_buf_name, exists('#TermClose') ? 'TermClose' : 'BufDelete',
-        \ t:gdbmi_buf_name, g:gdbmi_count)
+        \ t:gdbmi_buf_name,
+        \ (exists('#TermClose') ? 'TermClose' : 'BufDelete'),
+        \ t:gdbmi_buf_name,
+        \ g:gdbmi_count)
   exec l:autocmd
 
   let l:tty = s:StartGDBMI()
-  if empty(l:tty) | return | endif
+  if empty(l:tty)
+    call gdbmi#util#print_error(
+          \ 'gdbmi.nvim remote plugin failed initialize')
+    return
+  endif
 
   let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
 
