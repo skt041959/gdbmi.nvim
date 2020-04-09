@@ -48,6 +48,7 @@ function! s:StartGDBMI()
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
       return l:tty
     catch
+      echo v:exception
       if !has('nvim') && !exists('*neovim_rpc#serveraddr')
         call gdbmi#util#print_error(
               \ 'gdbmi.nvim requires vim-hug-neovim-rpc plugin in Vim')
@@ -65,6 +66,7 @@ function! s:StartGDBMI()
       let t:gdbmi_channel_id = g:gdbmi#_channel_id
       return gdbmi#util#rpcrequest('gdbmi_getslave', t:gdbmi_buf_name)
     catch
+      echo v:exception
       call gdbmi#util#print_error(
             \ 'gdbmi.nvim failed to load. '
             \ .'Try the :UpdateRemotePlugins command and restart Neovim.')

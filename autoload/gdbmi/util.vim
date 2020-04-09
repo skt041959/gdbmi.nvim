@@ -11,7 +11,7 @@ function! gdbmi#util#init() abort
   let t:gdbmi_win_current_buf = -1
 
   let t:gdbmi_cursor_line = -1
-  let t:gdbmi_cursor_sign_id = -1
+  let t:gdbmi_cursor_sign_id = 0
   
   let t:gdbmi_breakpoints_sign_ids = []
 endfunction
@@ -96,13 +96,13 @@ function! gdbmi#util#set_cursor_sign(file, line) abort
   let t:gdbmi_win_current_buf = bufnr(a:file, 1)
   let t:gdbmi_new_cursor_line = a:line
 
-  let t:gdbmi_cursor_sign_id = 4999 + (l:old != -1 ? 4998 - l:old : 0)
+  let t:gdbmi_cursor_sign_id = t:gdbmi_win_current_buf * 10000 + float2nr(fmod(l:old, 10000)) + 1
   if t:gdbmi_new_cursor_line != -1 && t:gdbmi_win_current_buf != -1
     let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%d buffer=%d',
           \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, t:gdbmi_win_current_buf)
     exec l:cmd
   endif
-  if l:old != -1
+  if l:old != 0
     exe 'sign unplace '.l:old
   endif
 endfunction
@@ -173,6 +173,10 @@ function! gdbmi#util#rpcrequest(event, ...) abort
   else
     return rpcrequest(t:gdbmi_channel_id, a:event, a:000)
   endif
+endfunction
+
+function! gdbmi#util#jump_to_pcsign() abort
+  call sign_jump(t:gdbmi_cursor_sign_id, '', t:gdbmi_cursor_sign_id / 10000)
 endfunction
 
 "}}}

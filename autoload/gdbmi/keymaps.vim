@@ -83,6 +83,7 @@ function! gdbmi#keymaps#init()
   let t:gdbmi_keymaps_config = l:config
 
   noremap <plug>GDBMIBringupGDB :call gdbmi#util#bringupgdb()<CR>
+  nnoremap <leader>dp :call gdbmi#util#jump_to_pcsign()<CR>
 endfunction
 
 function! gdbmi#keymaps#dispatch_set()
