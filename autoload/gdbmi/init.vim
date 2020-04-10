@@ -75,14 +75,6 @@ function! s:StartGDBMI()
   endif
 endfunction
 
-function! s:StopGDBMI()
-  if gdbmi#util#has_yarp()
-    call t:gdbmi_yarp.request('_gdbmi_stop')
-  else
-    call gdbmi#util#rpcrequest('gdbmi_stop')
-  endif
-endfunction
-
 function! gdbmi#init#Spawn(cmd) abort
   if has('nvim')
     if !has('python3')
@@ -98,7 +90,7 @@ function! gdbmi#init#Spawn(cmd) abort
     endif
   endif
 
-  sp | wincmd T
+  tab split
 
   call gdbmi#util#init()
 
@@ -135,9 +127,9 @@ function! gdbmi#init#Spawn(cmd) abort
     return
   endif
 
-  let l:cmd = a:cmd .' -q -f -ex "new-ui mi '. l:tty .'"'
+  let l:cmd = a:cmd . printf(' -q -f -ex "new-ui mi %s"', l:tty)
 
-  if exists('g:gdbmi_split_direction') && g:gdbmi_split_direction ==# 'vertical'
+  if g:gdbmi_split_direction ==? 'v'
     vsp | wincmd l | enew
   else
     sp | wincmd j | enew
@@ -170,7 +162,7 @@ function! gdbmi#init#teardown(count)
 
   if exists('t:gdbmi_gdb_job_id')
     tabclose
-    if exists('g:gdbmi_delete_after_quit') && g:gdbmi_delete_after_quit
+    if !empty(g:gdbmi_delete_after_quit)
       exe 'bdelete! '.l:gdbmi_buf_name
     endif
   endif
