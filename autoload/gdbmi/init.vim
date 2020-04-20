@@ -127,21 +127,16 @@ function! gdbmi#init#Spawn(cmd) abort
     return
   endif
 
-  let l:cmd = a:cmd . printf(' -q -f -ex "new-ui mi %s"', l:tty)
+  let l:cmd = printf('split +let\ t:gdbmi_gdb_job_id=&channel term://%s -q -f -ex \"new-ui mi %s\"', a:cmd, l:tty)
+  exe l:cmd
 
-  if g:gdbmi_split_direction ==? 'v'
-    vsp | wincmd l | enew
-  else
-    sp | wincmd j | enew
-  endif
-
-  if has('nvim')
-    let t:gdbmi_gdb_job_id = termopen(l:cmd)
-  else
-    let t:gdbmi_gdb_buf_name = term_start(l:cmd, {'curwin': 1})
-    let t:gdbmi_gdb_buf_id = bufnr(t:gdbmi_gdb_buf_name)
-    let t:gdbmi_gdb_job_id = t:gdbmi_gdb_buf_id
-  endif
+  " if has('nvim')
+  "   let t:gdbmi_gdb_job_id = termopen(l:cmd)
+  " else
+  "   let t:gdbmi_gdb_buf_name = term_start(l:cmd, {'curwin': 1})
+  "   let t:gdbmi_gdb_buf_id = bufnr(t:gdbmi_gdb_buf_name)
+  "   let t:gdbmi_gdb_job_id = t:gdbmi_gdb_buf_id
+  " endif
 
   exec 'file '. t:gdbmi_buf_name
   let t:gdbmi_gdb_win = win_getid()
