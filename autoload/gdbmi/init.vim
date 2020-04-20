@@ -103,8 +103,8 @@ function! gdbmi#init#Spawn(cmd) abort
 
     augroup GDBMI
       autocmd!
-      autocmd BufEnter * call gdbmi#util#on_BufEnter()
-      autocmd BufLeave * call gdbmi#util#on_BufLeave()
+      " autocmd BufEnter * call gdbmi#util#on_BufEnter()
+      " autocmd BufLeave * call gdbmi#util#on_BufLeave()
       autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
       autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
     augroup END
