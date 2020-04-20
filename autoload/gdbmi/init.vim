@@ -75,7 +75,8 @@ function! s:StartGDBMI()
   endif
 endfunction
 
-function! gdbmi#init#Spawn(cmd) abort
+function! gdbmi#init#Spawn(cmd, mods) abort
+  echo a:000
   if has('nvim')
     if !has('python3')
       call gdbmi#util#print_error(
@@ -127,7 +128,7 @@ function! gdbmi#init#Spawn(cmd) abort
     return
   endif
 
-  let l:cmd = printf('split +let\ t:gdbmi_gdb_job_id=&channel term://%s -q -f -ex \"new-ui mi %s\"', a:cmd, l:tty)
+  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&channel term://%s -q -f -ex \"new-ui mi %s\"', a:mods, a:cmd, l:tty)
   exe l:cmd
 
   " if has('nvim')

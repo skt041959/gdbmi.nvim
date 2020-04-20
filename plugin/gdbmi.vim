@@ -22,8 +22,7 @@ execute 'sign define GdbmiCurrentLine text=' . s:pc_symbol .
 execute 'sign define GdbmiCurrentLine2 text=' . s:pc_symbol .
     \ ' texthl=GDBMIUnselectedPCSign linehl=GDBMIUnselectedPCLine'
 
-command! -nargs=1 -complete=shellcmd GDBMILaunch call gdbmi#init#Spawn(<q-args>)
+command! -nargs=1 -complete=shellcmd GDBMILaunch call gdbmi#init#Spawn(<q-args>, <q-mods>)
 
-let g:gdbmi_split_direction = get(g:, 'gdbmi_split_direction', 'h')
 let g:gdbmi_delete_after_quit = get(g:, 'gdbmi_delete_after_quit', 0)
 
