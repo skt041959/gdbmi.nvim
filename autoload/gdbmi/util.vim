@@ -147,12 +147,14 @@ function! gdbmi#util#get_selection(...) abort
 endfunction
 
 function! gdbmi#util#bringupgdb() abort
-  if !empty(t:gdbmi_gdb_win)
+  if !exists('t:gdbmi_channel_id') | return | endif
+
+  if exists('t:gdbmi_gdb_win') && !empty(t:gdbmi_gdb_win)
     call win_gotoid(t:gdbmi_gdb_win)
-  else
-    exe 'botright split '.t:gdbmi_buf_name.'| wincmd b'
+  elseif bufexists('t:gdbmi_buf_name')
+    exe 'botright split '.t:gdbmi_buf_name
+    startinsert
   endif
-  startinsert
 endfunction
 
 function! gdbmi#util#rpcnotify(event, ...) abort
