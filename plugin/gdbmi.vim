@@ -11,7 +11,7 @@ highlight default link GDBMIBreakpointSign Type
 highlight default link GDBMIUnselectedPCSign NonText
 highlight default link GDBMIUnselectedPCLine DiffChange
 highlight default link GDBMISelectedPCSign Debug
-highlight default link GDBMISelectedPCLine DiffText
+highlight default link GDBMISelectedPCLine Visual
 
 execute 'sign define GdbmiBreakpoint text=' . s:bp_symbol .
     \ ' texthl=GDBMIBreakpointSign linehl=GDBMIBreakpointLine'

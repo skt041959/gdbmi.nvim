@@ -10,7 +10,7 @@ let s:default_config = {
       \ 'key_framedown':    '<leader>dD',
       \ 'key_eval':         '<leader>de',
       \ 'key_ui_display':   '<leader>dw',
-      \ 'key_ui_bringupgdb':  '<F7>',
+      \ 'key_ui_bringupgdb':  '<leader>d<space>',
       \ 'set_keymaps': function('gdbmi#keymaps#set'),
       \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
