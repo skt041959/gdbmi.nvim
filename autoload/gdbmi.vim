@@ -37,6 +37,10 @@ function! gdbmi#toggle_break()
   call gdbmi#send(l:cmd)
 endfunction
 
+function! gdbmi#break(expr)
+  call gdbmi#send(printf('break %s', a:expr))
+endfunction
+
 function! gdbmi#display(expr)
   call gdbmi#util#rpcnotify('gdbmi_display', t:gdbmi_buf_name, a:expr)
 endfunction

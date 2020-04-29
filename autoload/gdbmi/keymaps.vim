@@ -27,6 +27,7 @@ let s:default_keymaps = [
       \ ['n', 'key_framedown',':GDBMIFrameDown'],
       \ ['n', 'key_eval',     ':GDBMIEvalWord'],
       \ ['n', 'key_ui_display',':GDBMIDisplayWord'],
+      \ ['v', 'key_breakpoint',':GDBMIBreakpointExpr'],
       \ ['v', 'key_eval',     ':GDBMIEvalRange'],
       \ ['v', 'key_ui_display',':GDBMIDisplayRange'],
       \ ]

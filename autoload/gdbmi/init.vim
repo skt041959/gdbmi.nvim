@@ -35,6 +35,7 @@ function! s:DefineCommands()
 
   command! -range GDBMIEvalRange call gdbmi#eval(gdbmi#util#get_selection(<f-args>))
   command! -range GDBMIDisplayRange call gdbmi#display(gdbmi#util#get_selection(<f-args>))
+  command! -range GDBMIBreakpointExpr call gdbmi#break(gdbmi#util#get_selection(<f-args>))
 
   command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
 endfunction
