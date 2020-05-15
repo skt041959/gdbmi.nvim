@@ -25,7 +25,7 @@ function! gdbmi#eval(expr)
   call gdbmi#send(printf('print %s', a:expr))
 endfunction
 
-function! gdbmi#toggle_break()
+function! gdbmi#toggle_break_line()
   if !exists('t:gdbmi_gdb_job_id') | return | endif
 
   let l:buf = bufnr('%')
@@ -37,7 +37,7 @@ function! gdbmi#toggle_break()
   call gdbmi#send(l:cmd)
 endfunction
 
-function! gdbmi#break(expr)
+function! gdbmi#break_expr(expr)
   call gdbmi#send(printf('break %s', a:expr))
 endfunction
 

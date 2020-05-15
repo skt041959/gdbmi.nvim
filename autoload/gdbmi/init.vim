@@ -19,7 +19,7 @@ endfunction
 
 function! s:DefineCommands()
   command! GDBMIDebugStop call gdbmi#kill()
-  command! GDBMIBreakpointToggle call gdbmi#toggle_break()
+  command! GDBMIBreakpointToggle call gdbmi#toggle_break_line()
   command! GDBMIRun call gdbmi#send('run')
   command! GDBMIUntil call gdbmi#send('until ' . line('.'))
   command! GDBMIAdvance call gdbmi#send('advance '.expand('<cword>'))
@@ -35,7 +35,7 @@ function! s:DefineCommands()
 
   command! -range GDBMIEvalRange call gdbmi#eval(gdbmi#util#get_selection(<f-args>))
   command! -range GDBMIDisplayRange call gdbmi#display(gdbmi#util#get_selection(<f-args>))
-  command! -range GDBMIBreakpointExpr call gdbmi#break(gdbmi#util#get_selection(<f-args>))
+  command! -range GDBMIBreakpointExpr call gdbmi#break_expr(gdbmi#util#get_selection(<f-args>))
 
   command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
 endfunction
@@ -76,8 +76,7 @@ function! s:StartGDBMI()
   endif
 endfunction
 
-function! gdbmi#init#Spawn(cmd, mods) abort
-  echo a:000
+function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   if has('nvim')
     if !has('python3')
       call gdbmi#util#print_error(
@@ -122,27 +121,27 @@ function! gdbmi#init#Spawn(cmd, mods) abort
         \ g:gdbmi_count)
   exec l:autocmd
 
-  let l:tty = s:StartGDBMI()
-  if empty(l:tty)
+  let l:new_ui_tty = s:StartGDBMI()
+  if empty(l:new_ui_tty)
     call gdbmi#util#print_error(
           \ 'gdbmi.nvim remote plugin failed initialize')
     return
   endif
 
-  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&channel term://%s -q -f -ex \"new-ui mi %s\"', a:mods, a:cmd, l:tty)
+  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&channel term://%s', a:mods, a:cmd)
   exe l:cmd
 
-  " if has('nvim')
-  "   let t:gdbmi_gdb_job_id = termopen(l:cmd)
-  " else
-  "   let t:gdbmi_gdb_buf_name = term_start(l:cmd, {'curwin': 1})
-  "   let t:gdbmi_gdb_buf_id = bufnr(t:gdbmi_gdb_buf_name)
-  "   let t:gdbmi_gdb_job_id = t:gdbmi_gdb_buf_id
-  " endif
-
-  exec 'file '. t:gdbmi_buf_name
+  exe 'file '. t:gdbmi_buf_name
+  " autocmd GDBMI TabClosed GDBMI_* call gdbmi#init#teardown(<abuffer>)
   let t:gdbmi_gdb_win = win_getid()
-  startinsert
+  call gdbmi#send('new-ui mi '.l:new_ui_tty)
+  call gdbmi#send('set annotate 1')
+
+  if a:newtty
+    exe 'split +let\ t:gdbmi_inferior_tty_job=&channel term://tail -f /dev/null'
+    let t:gdbmi_inferior_tty = nvim_get_chan_info(t:gdbmi_inferior_tty_job).pty
+    call gdbmi#send('set inferior-tty '.t:gdbmi_inferior_tty)
+  endif
 endfunction
 
 function! gdbmi#init#teardown(count)

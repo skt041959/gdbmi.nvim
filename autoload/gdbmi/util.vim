@@ -151,7 +151,8 @@ function! gdbmi#util#bringupgdb() abort
 
   if exists('t:gdbmi_gdb_win') && !empty(t:gdbmi_gdb_win)
     call win_gotoid(t:gdbmi_gdb_win)
-  elseif bufexists('t:gdbmi_buf_name')
+    startinsert
+  elseif bufexists(t:gdbmi_buf_name)
     exe 'botright split '.t:gdbmi_buf_name
     startinsert
   endif
