@@ -39,8 +39,6 @@ endfunction
 
 function! gdbmi#util#init() abort
   if !g:gdbmi_count
-    call s:DefineCommands()
-
     augroup GDBMI
       autocmd!
       autocmd BufEnter * call gdbmi#util#on_BufEnter()
@@ -103,12 +101,15 @@ function! gdbmi#util#on_BufLeave() abort
 endfunction
 
 function! gdbmi#util#on_BufWinEnter() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
   if t:gdbmi_buf_name ==# expand('<afile>')
     let t:gdbmi_gdb_win = win_getid()
   endif
+  if !exists('t:gdbmi_channel_id') | return | endif
 endfunction
 
 function! gdbmi#util#on_BufHidden() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
   if t:gdbmi_buf_name ==# expand('<afile>')
     let t:gdbmi_gdb_win = 0
   endif
@@ -158,9 +159,11 @@ function! gdbmi#util#set_cursor_sign(file, line) abort
 
   let t:gdbmi_cursor_sign_id = t:gdbmi_win_current_buf * 10000 + float2nr(fmod(l:old, 10000)) + 1
   if t:gdbmi_new_cursor_line != -1 && t:gdbmi_win_current_buf != -1
-    let l:cmd = printf('sign place %d name=GdbmiCurrentLine line=%d buffer=%d',
-          \ t:gdbmi_cursor_sign_id, t:gdbmi_new_cursor_line, t:gdbmi_win_current_buf)
-    exec l:cmd
+    call sign_place(t:gdbmi_cursor_sign_id,
+          \ t:gdbmi_buf_name,
+          \ 'GdbmiCurrentLine',
+          \ t:gdbmi_win_current_buf,
+          \ {'lnum': t:gdbmi_new_cursor_line})
   endif
   if l:old != 0
     call sign_unplace(t:gdbmi_buf_name, {'id': l:old})
@@ -177,8 +180,7 @@ function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
   let l:target_buf = bufnr(a:file, 1)
   let l:sid = 5000 + a:id
   call add(t:gdbmi_breakpoints_sign_ids, l:sid)
-  let l:cmd = printf('sign place %d group=%s name=GdbmiBreakpoint line=%s file=%s', l:sid, t:gdbmi_buf_name, a:line, a:file)
-  exec l:cmd
+  call sign_place(l:sid, t:gdbmi_buf_name, 'GdbmiBreakpoint', a:file, {'lnum': a:line})
 endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id) abort
