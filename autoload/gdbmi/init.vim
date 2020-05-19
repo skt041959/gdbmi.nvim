@@ -93,6 +93,9 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
 
   tab split
 
+  if !g:gdbmi_count
+    call s:DefineCommands()
+  endif
   call gdbmi#util#init()
 
   call gdbmi#keymaps#init()
@@ -110,7 +113,6 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   exe l:cmd
 
   exe 'file '. t:gdbmi_buf_name
-  " autocmd GDBMI TabClosed GDBMI_* call gdbmi#init#teardown(<abuffer>)
   let t:gdbmi_gdb_win = win_getid()
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
