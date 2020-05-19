@@ -99,28 +99,6 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
 
   call gdbmi#display#init()
 
-  if !g:gdbmi_count
-    call s:DefineCommands()
-
-    augroup GDBMI
-      autocmd!
-      " autocmd BufEnter * call gdbmi#util#on_BufEnter()
-      " autocmd BufLeave * call gdbmi#util#on_BufLeave()
-      autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
-      autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
-    augroup END
-  endif
-  let g:gdbmi_count += 1
-  let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
-
-  exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
-  let l:autocmd = printf('autocmd %s %s %s call gdbmi#init#teardown(%d)',
-        \ t:gdbmi_buf_name,
-        \ (exists('#TermClose') ? 'TermClose' : 'BufDelete'),
-        \ t:gdbmi_buf_name,
-        \ g:gdbmi_count)
-  exec l:autocmd
-
   let l:new_ui_tty = s:StartGDBMI()
   if empty(l:new_ui_tty)
     call gdbmi#util#print_error(
@@ -144,7 +122,9 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   endif
 endfunction
 
-function! gdbmi#init#teardown(count)
+function! gdbmi#init#teardown(count, amatch)
+  redraw | echomsg "trigger termclose ".a:amatch
+  return
   let l:gdbmi_buf_name = 'GDBMI_'.a:count
 
   call gdbmi#util#clear_sign()

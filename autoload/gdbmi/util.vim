@@ -7,6 +7,26 @@ function! gdbmi#util#has_yarp() abort
 endfunction
 
 function! gdbmi#util#init() abort
+  if !g:gdbmi_count
+    call s:DefineCommands()
+
+    augroup GDBMI
+      autocmd!
+      autocmd BufEnter * call gdbmi#util#on_BufEnter()
+      autocmd BufLeave * call gdbmi#util#on_BufLeave()
+      autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
+      autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
+      autocmd TabLeave * call gdbmi#util#on_TabLeave(<amatch>)
+    augroup END
+  endif
+  let g:gdbmi_count += 1
+  let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
+
+  exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
+  exe printf('autocmd %s TermClose * call gdbmi#init#teardown(%d, <amatch>)',
+        \ t:gdbmi_buf_name,
+        \ g:gdbmi_count)
+
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
 
