@@ -6,6 +6,37 @@ function! gdbmi#util#has_yarp() abort
   return !has('nvim')
 endfunction
 
+function! gdbmi#util#sign_init() abort
+  let s:bp_symbol = get(g:, 'gdbmi#sign#bp_symbol', 'B>')
+  let s:pc_symbol = get(g:, 'gdbmi#sign#pc_symbol', '->')
+
+  exe 'highlight default link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
+  exe 'highlight default link GDBMIUnselectedPCSign'.t:gdbmi_buf_name.' NonText'
+  exe 'highlight default link GDBMIUnselectedPCLine'.t:gdbmi_buf_name.' DiffChange'
+  exe 'highlight default link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
+  exe 'highlight default link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
+
+  exe 'sign define GdbmiBreakpoint text=' . s:bp_symbol .
+        \ ' texthl=GDBMIBreakpointSign'.t:gdbmi_buf_name.
+        \ ' linehl=GDBMIBreakpointLine'.t:gdbmi_buf_name
+
+  exe 'sign define GdbmiCurrentLine text=' . s:pc_symbol .
+        \ ' texthl=GDBMISelectedPCSign'.t:gdbmi_buf_name.
+        \ ' linehl=GDBMISelectedPCLine'.t:gdbmi_buf_name
+
+  exe 'sign define GdbmiCurrentLine2 text=' . s:pc_symbol .
+        \ ' texthl=GDBMIUnselectedPCSign'.t:gdbmi_buf_name.
+        \ ' linehl=GDBMIUnselectedPCLine'.t:gdbmi_buf_name
+endfunction
+
+function! gdbmi#util#sign_hide() abort
+  exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Normal'
+endfunction
+
+function! gdbmi#util#sign_reset() abort
+  exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
+endfunction
+
 function! gdbmi#util#init() abort
   if !g:gdbmi_count
     call s:DefineCommands()
@@ -34,6 +65,7 @@ function! gdbmi#util#init() abort
   let t:gdbmi_cursor_sign_id = 0
   
   let t:gdbmi_breakpoints_sign_ids = []
+  call gdbmi#util#sign_init()
 endfunction
 
 let s:gdbmi_enable_keymap_autocmd = 1
@@ -80,6 +112,14 @@ function! gdbmi#util#on_BufHidden() abort
   if t:gdbmi_buf_name ==# expand('<afile>')
     let t:gdbmi_gdb_win = 0
   endif
+endfunction
+
+function! gdbmi#util#on_TabLeave(amatch) abort
+  redraw | echomsg a:amatch
+endfunction
+
+function! gdbmi#util#on_TabEnter(amatch) abort
+  redraw | echomsg a:amatch
 endfunction
 
 function! gdbmi#util#clear_sign() abort
