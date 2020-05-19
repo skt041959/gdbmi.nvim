@@ -103,13 +103,13 @@ function! gdbmi#util#set_cursor_sign(file, line) abort
     exec l:cmd
   endif
   if l:old != 0
-    exe 'sign unplace '.l:old
+    call sign_unplace(t:gdbmi_buf_name, {'id': l:old})
   endif
 endfunction
 
 function! gdbmi#util#clear_cursor_sign() abort
   if t:gdbmi_cursor_sign_id > 0
-    exe 'sign unplace '.t:gdbmi_cursor_sign_id
+    call sign_unplace(t:gdbmi_buf_name, {'id': t:gdbmi_cursor_sign_id})
   endif
 endfunction
 
@@ -117,7 +117,7 @@ function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
   let l:target_buf = bufnr(a:file, 1)
   let l:sid = 5000 + a:id
   call add(t:gdbmi_breakpoints_sign_ids, l:sid)
-  let l:cmd = printf('sign place %d name=GdbmiBreakpoint line=%s file=%s', l:sid, a:line, a:file)
+  let l:cmd = printf('sign place %d group=%s name=GdbmiBreakpoint line=%s file=%s', l:sid, t:gdbmi_buf_name, a:line, a:file)
   exec l:cmd
 endfunction
 
@@ -126,13 +126,13 @@ function! gdbmi#util#del_breakpoint_sign(id) abort
   let l:idx = index(t:gdbmi_breakpoints_sign_ids, l:sid)
   if l:idx >= 0
     call remove(t:gdbmi_breakpoints_sign_ids, l:idx)
-    exec 'sign unplace '.l:sid
+    call sign_unplace(t:gdbmi_buf_name, {'id': l:sid})
   endif
 endfunction
 
 function! gdbmi#util#clear_breakpoint_sign() abort
   for id in t:gdbmi_breakpoints_sign_ids
-    exe 'sign unplace '.id
+    call sign_unplace(t:gdbmi_buf_name, {'id': id})
   endfor
   let t:gdbmi_breakpoints_sign_ids = []
 endfunction
@@ -179,7 +179,9 @@ function! gdbmi#util#rpcrequest(event, ...) abort
 endfunction
 
 function! gdbmi#util#jump_to_pcsign() abort
-  call sign_jump(t:gdbmi_cursor_sign_id, '', t:gdbmi_cursor_sign_id / 10000)
+  if !exists('t:gdbmi_channel_id') | return | endif
+
+  call sign_jump(t:gdbmi_cursor_sign_id, t:gdbmi_buf_name, t:gdbmi_cursor_sign_id / 10000)
 endfunction
 
 "}}}
