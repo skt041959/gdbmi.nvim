@@ -113,7 +113,13 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&channel term://%s', a:mods, a:cmd)
   exe l:cmd
 
-  exe 'file '. t:gdbmi_buf_name
+  try
+    exe 'file '. t:gdbmi_buf_name
+  catch E95
+    exe 'bw! '.t:gdbmi_buf_name
+    exe 'file '. t:gdbmi_buf_name
+  endtry
+
   let t:gdbmi_gdb_win = win_getid()
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
