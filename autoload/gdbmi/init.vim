@@ -97,6 +97,7 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
     call s:DefineCommands()
   endif
   call gdbmi#util#init()
+  call gdbmi#util#sign_init()
 
   call gdbmi#keymaps#init()
 
@@ -124,25 +125,22 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   endif
 endfunction
 
-function! gdbmi#init#teardown(count, amatch)
-  redraw | echomsg "trigger termclose ".a:amatch
+function! gdbmi#init#teardown()
+  redraw | echomsg "trigger termclose ".expand('<amatch>')
   return
-  let l:gdbmi_buf_name = 'GDBMI_'.a:count
 
   call gdbmi#util#clear_sign()
 
-  call gdbmi#util#rpcnotify('gdbmi_stop', l:gdbmi_buf_name)
+  call gdbmi#util#rpcnotify('gdbmi_stop', t:gdbmi_buf_name)
 
   if !g:gdbmi_count
     call s:UndefCommands()
-    autocmd! l:gdbmi_buf_name
+    autocmd! t:gdbmi_buf_name
   endif
 
-  if exists('t:gdbmi_gdb_job_id')
-    tabclose
-    if !empty(g:gdbmi_delete_after_quit)
-      exe 'bdelete! '.l:gdbmi_buf_name
-    endif
+  tabclose
+  if !empty(g:gdbmi_delete_after_quit)
+    exe 'bdelete! '.t:gdbmi_buf_name
   endif
 endfunction
 

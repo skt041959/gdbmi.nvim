@@ -16,25 +16,32 @@ function! gdbmi#util#sign_init() abort
   exe 'highlight default link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
   exe 'highlight default link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
 
-  exe 'sign define GdbmiBreakpoint text=' . s:bp_symbol .
+  exe 'sign define GdbmiBreakpoint'.t:gdbmi_buf_name.
+        \ ' text=' . s:bp_symbol .
         \ ' texthl=GDBMIBreakpointSign'.t:gdbmi_buf_name.
         \ ' linehl=GDBMIBreakpointLine'.t:gdbmi_buf_name
 
-  exe 'sign define GdbmiCurrentLine text=' . s:pc_symbol .
+  exe 'sign define GdbmiCurrentLine'.t:gdbmi_buf_name.
+        \ ' text=' . s:pc_symbol .
         \ ' texthl=GDBMISelectedPCSign'.t:gdbmi_buf_name.
         \ ' linehl=GDBMISelectedPCLine'.t:gdbmi_buf_name
 
-  exe 'sign define GdbmiCurrentLine2 text=' . s:pc_symbol .
+  exe 'sign define GdbmiCurrentLine2'.t:gdbmi_buf_name.
+        \ ' text=' . s:pc_symbol .
         \ ' texthl=GDBMIUnselectedPCSign'.t:gdbmi_buf_name.
         \ ' linehl=GDBMIUnselectedPCLine'.t:gdbmi_buf_name
 endfunction
 
 function! gdbmi#util#sign_hide() abort
   exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Normal'
+  exe 'highlight link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Normal'
+  exe 'highlight link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Normal'
 endfunction
 
 function! gdbmi#util#sign_reset() abort
   exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
+  exe 'highlight link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
+  exe 'highlight link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
 endfunction
 
 function! gdbmi#util#init() abort
@@ -45,16 +52,15 @@ function! gdbmi#util#init() abort
       autocmd BufLeave * call gdbmi#util#on_BufLeave()
       autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
       autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
-      autocmd TabLeave * call gdbmi#util#on_TabLeave(<amatch>)
+      autocmd TabLeave * call gdbmi#util#on_TabLeave()
+      autocmd TabEnter * call gdbmi#util#on_TabEnter()
     augroup END
   endif
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
   exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
-  exe printf('autocmd %s TermClose * call gdbmi#init#teardown(%d, <amatch>)',
-        \ t:gdbmi_buf_name,
-        \ g:gdbmi_count)
+  exe 'autocmd '. t:gdbmi_buf_name . ' TermClose * call gdbmi#init#teardown()'
 
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
@@ -63,7 +69,6 @@ function! gdbmi#util#init() abort
   let t:gdbmi_cursor_sign_id = 0
   
   let t:gdbmi_breakpoints_sign_ids = []
-  call gdbmi#util#sign_init()
 endfunction
 
 let s:gdbmi_enable_keymap_autocmd = 1
@@ -105,7 +110,6 @@ function! gdbmi#util#on_BufWinEnter() abort
   if t:gdbmi_buf_name ==# expand('<afile>')
     let t:gdbmi_gdb_win = win_getid()
   endif
-  if !exists('t:gdbmi_channel_id') | return | endif
 endfunction
 
 function! gdbmi#util#on_BufHidden() abort
@@ -115,12 +119,14 @@ function! gdbmi#util#on_BufHidden() abort
   endif
 endfunction
 
-function! gdbmi#util#on_TabLeave(amatch) abort
-  redraw | echomsg a:amatch
+function! gdbmi#util#on_TabLeave() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  call gdbmi#util#sign_hide()
 endfunction
 
-function! gdbmi#util#on_TabEnter(amatch) abort
-  redraw | echomsg a:amatch
+function! gdbmi#util#on_TabEnter() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  call gdbmi#util#sign_reset()
 endfunction
 
 function! gdbmi#util#clear_sign() abort
@@ -161,7 +167,7 @@ function! gdbmi#util#set_cursor_sign(file, line) abort
   if t:gdbmi_new_cursor_line != -1 && t:gdbmi_win_current_buf != -1
     call sign_place(t:gdbmi_cursor_sign_id,
           \ t:gdbmi_buf_name,
-          \ 'GdbmiCurrentLine',
+          \ 'GdbmiCurrentLine'.t:gdbmi_buf_name,
           \ t:gdbmi_win_current_buf,
           \ {'lnum': t:gdbmi_new_cursor_line})
   endif
@@ -180,7 +186,7 @@ function! gdbmi#util#set_breakpoint_sign(id, file, line) abort
   let l:target_buf = bufnr(a:file, 1)
   let l:sid = 5000 + a:id
   call add(t:gdbmi_breakpoints_sign_ids, l:sid)
-  call sign_place(l:sid, t:gdbmi_buf_name, 'GdbmiBreakpoint', a:file, {'lnum': a:line})
+  call sign_place(l:sid, t:gdbmi_buf_name, 'GdbmiBreakpoint'.t:gdbmi_buf_name, a:file, {'lnum': a:line})
 endfunction
 
 function! gdbmi#util#del_breakpoint_sign(id) abort
