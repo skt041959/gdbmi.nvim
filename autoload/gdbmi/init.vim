@@ -132,8 +132,7 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
 endfunction
 
 function! gdbmi#init#teardown()
-  redraw | echomsg "trigger termclose ".expand('<amatch>')
-  return
+  redraw | echomsg "GDBMI Session closed ".expand('<amatch>')
 
   call gdbmi#util#clear_sign()
 

@@ -60,7 +60,7 @@ function! gdbmi#util#init() abort
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
 
   exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
-  exe 'autocmd '. t:gdbmi_buf_name . ' TermClose * call gdbmi#init#teardown()'
+  exe 'autocmd '. t:gdbmi_buf_name . ' TermClose GDBMI_* call gdbmi#init#teardown()'
 
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
