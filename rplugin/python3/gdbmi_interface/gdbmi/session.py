@@ -231,8 +231,9 @@ class Session(object):
 
     def breakpoints_status(self, filename, line):
         for number, bkpt in self.breakpoints.items():
-            if bkpt['type'] == 'breakpoint' and int(bkpt['line']) == int(line) and bkpt['fullname'] == filename:
-                return number
+            if bkpt['type'] == 'breakpoint' and bkpt['addr'] != "<MULTIPLE>":
+                if int(bkpt['line']) == int(line) and bkpt['fullname'] == filename:
+                    return number
         else:
             return 0
 

@@ -19,7 +19,7 @@ def getLogger(name):
         'handlers': {
             'file': {
                 'class': 'logging.handlers.WatchedFileHandler',
-                'filename': f"/tmp/gdbmi_log_{os.getpid()}",
+                'filename': f'/tmp/gdbmi_{os.getpid()}.log',
                 'formatter': 'gdbmi'
             }
         },
