@@ -1,55 +1,52 @@
 let s:default_config = {
-      \ 'key_until':        '<leader>du',
-      \ 'key_advance':      '<leader>da',
-      \ 'key_continue':     '<leader>dc',
-      \ 'key_next':         '<leader>dn',
-      \ 'key_step':         '<leader>ds',
-      \ 'key_finish':       '<leader>df',
-      \ 'key_breakpoint':   '<leader>db',
-      \ 'key_frameup':      '<leader>dU',
-      \ 'key_framedown':    '<leader>dD',
-      \ 'key_eval':         '<leader>de',
-      \ 'key_ui_display':   '<leader>dw',
-      \ 'key_ui_bringupgdb':  '<leader>d<space>',
+      \ 'key_until':         '<leader>du',
+      \ 'key_advance':       '<leader>da',
+      \ 'key_continue':      '<leader>dc',
+      \ 'key_next':          '<leader>dn',
+      \ 'key_step':          '<leader>ds',
+      \ 'key_finish':        '<leader>df',
+      \ 'key_breakpoint':    '<leader>db',
+      \ 'key_frameup':       '<leader>dU',
+      \ 'key_framedown':     '<leader>dD',
+      \ 'key_eval':          '<leader>de',
+      \ 'key_ui_display':    '<leader>dw',
+      \ 'key_ui_bringupgdb': '<leader>d<space>',
+      \ 'key_ui_tocode':     '<leader>dp',
+      \ 'key_ui_scrolldown': '<down>',
+      \ 'key_ui_scrollup':   '<up>',
       \ 'set_keymaps': function('gdbmi#keymaps#set'),
       \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
 
 let s:default_keymaps = [
-      \ ['n', 'key_until',    ':GDBMIUntil'],
-      \ ['n', 'key_advance',  ':GDBMIAdvance'],
-      \ ['n', 'key_continue', ':GDBMIContinue'],
-      \ ['n', 'key_next',     ':GDBMINext'],
-      \ ['n', 'key_step',     ':GDBMIStep'],
-      \ ['n', 'key_finish',   ':GDBMIFinish'],
-      \ ['n', 'key_breakpoint',':GDBMIBreakpointToggle'],
-      \ ['n', 'key_frameup',  ':GDBMIFrameUp'],
-      \ ['n', 'key_framedown',':GDBMIFrameDown'],
-      \ ['n', 'key_eval',     ':GDBMIEvalWord'],
-      \ ['n', 'key_ui_display',':GDBMIDisplayWord'],
-      \ ['v', 'key_breakpoint',':GDBMIBreakpointExpr'],
-      \ ['v', 'key_eval',     ':GDBMIEvalRange'],
-      \ ['v', 'key_ui_display',':GDBMIDisplayRange'],
-      \ ]
-
-let s:default_plug_keymaps = [
-      \ ['n', 'key_ui_bringupgdb', '<plug>GDBMIBringupGDB'],
+      \ ['n', 'key_until',         '<cmd>GDBMIUntil<CR>'],
+      \ ['n', 'key_advance',       '<cmd>GDBMIAdvance<CR>'],
+      \ ['n', 'key_continue',      '<cmd>GDBMIContinue<CR>'],
+      \ ['n', 'key_next',          '<cmd>GDBMINext<CR>'],
+      \ ['n', 'key_step',          '<cmd>GDBMIStep<CR>'],
+      \ ['n', 'key_finish',        '<cmd>GDBMIFinish<CR>'],
+      \ ['n', 'key_breakpoint',    '<cmd>GDBMIBreakpointToggle<CR>'],
+      \ ['n', 'key_frameup',       '<cmd>GDBMIFrameUp<CR>'],
+      \ ['n', 'key_framedown',     '<cmd>GDBMIFrameDown<CR>'],
+      \ ['n', 'key_eval',          '<cmd>GDBMIEvalWord<CR>'],
+      \ ['n', 'key_ui_display',    '<cmd>GDBMIDisplayWord<CR>'],
+      \ ['n', 'key_ui_bringupgdb', '<cmd>call gdbmi#util#bringupgdb()<CR>'],
+      \ ['v', 'key_breakpoint',    '<cmd>GDBMIBreakpointExpr<CR>'],
+      \ ['v', 'key_eval',          '<cmd>GDBMIEvalRange<CR>'],
+      \ ['v', 'key_ui_display',    '<cmd>GDBMIDisplayRange<CR>'],
+      \ ['t', 'key_ui_tocode',     '<cmd>call gdbmi#util#jump_to_pcsign()<CR>'],
+      \ ['t', 'key_ui_scrolldown', '<cmd>call gdbmi#util#scrolldown()<CR>'],
+      \ ['t', 'key_ui_scrollup',   '<cmd>call gdbmi#util#scrollup()<CR>'],
       \ ]
 
 function! gdbmi#keymaps#set()
   for keymap in s:default_keymaps
     let key = get(t:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
-      exe keymap[0].'noremap <buffer> <silent> '.key.' '.keymap[2].'<cr>'
+      exe printf('%snoremap <buffer> <silent> %s %s', keymap[0], key, keymap[2])
     endif
   endfor
 
-  for keymap in s:default_plug_keymaps
-    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
-    if !empty(key)
-      exe keymap[0].'map <buffer> <silent> '.key.' '.keymap[2]
-    endif
-  endfor
 endfunction
 
 function! gdbmi#keymaps#unset()
@@ -64,15 +61,8 @@ function! gdbmi#keymaps#unset()
 endfunction
 
 function! gdbmi#keymaps#init()
-  if exists('g:gdbmi_config')
-    let l:config = copy(g:gdbmi_config)
-  else
-    let l:config = copy(s:default_config)
-  endif
-
-  if exists('g:gdbmi_config_override')
-    call extend(l:config, g:gdbmi_config_override)
-  endif
+  let l:config = copy(get(g:, 'gdbmi_config', s:default_config))
+  call extend(l:config, get(g:, 'gdbmi_config_override', {}))
 
   for key in keys(l:config)
     let varname = 'g:gdbmi_'.key
@@ -83,16 +73,13 @@ function! gdbmi#keymaps#init()
 
   let t:gdbmi_keymaps_config = l:config
 
-  noremap <plug>GDBMIBringupGDB :call gdbmi#util#bringupgdb()<CR>
+  noremap <plug>GDBMIBringupGDB :<CR>
   nnoremap <leader>dp :call gdbmi#util#jump_to_pcsign()<CR>
 endfunction
 
 function! gdbmi#keymaps#dispatch_set()
   if !exists('t:gdbmi_keymaps_config') | return | endif
-  try
-    call t:gdbmi_keymaps_config['set_keymaps']()
-  catch /.*/
-  endtry
+  call t:gdbmi_keymaps_config['set_keymaps']()
 endfunction
 
 function! gdbmi#keymaps#dispatch_unset()

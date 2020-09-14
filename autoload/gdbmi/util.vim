@@ -45,22 +45,8 @@ function! gdbmi#util#sign_reset() abort
 endfunction
 
 function! gdbmi#util#init() abort
-  if !g:gdbmi_count
-    augroup GDBMI
-      autocmd!
-      autocmd BufEnter * call gdbmi#util#on_BufEnter()
-      autocmd BufLeave * call gdbmi#util#on_BufLeave()
-      autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
-      autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
-      autocmd TabLeave * call gdbmi#util#on_TabLeave()
-      autocmd TabEnter * call gdbmi#util#on_TabEnter()
-    augroup END
-  endif
   let g:gdbmi_count += 1
   let t:gdbmi_buf_name = 'GDBMI_'.g:gdbmi_count
-
-  exe 'augroup '. t:gdbmi_buf_name . ' | autocmd! | augroup END'
-  exe 'autocmd '. t:gdbmi_buf_name . ' TermClose GDBMI_* call gdbmi#init#teardown()'
 
   let t:gdbmi_win_jump_window = 1
   let t:gdbmi_win_current_buf = -1
@@ -69,6 +55,7 @@ function! gdbmi#util#init() abort
   let t:gdbmi_cursor_sign_id = 0
   
   let t:gdbmi_breakpoints_sign_ids = []
+  call gdbmi#util#sign_init()
 endfunction
 
 let s:gdbmi_enable_keymap_autocmd = 1
@@ -79,10 +66,6 @@ function! gdbmi#util#on_BufEnter() abort
   endif
 
   if !s:gdbmi_enable_keymap_autocmd
-    return
-  endif
-
-  if &buftype ==# 'terminal'
     return
   endif
 
@@ -179,6 +162,7 @@ endfunction
 function! gdbmi#util#clear_cursor_sign() abort
   if t:gdbmi_cursor_sign_id > 0
     call sign_unplace(t:gdbmi_buf_name, {'id': t:gdbmi_cursor_sign_id})
+    let t:gdbmi_cursor_sign_id = 0
   endif
 endfunction
 
@@ -248,8 +232,29 @@ endfunction
 
 function! gdbmi#util#jump_to_pcsign() abort
   if !exists('t:gdbmi_channel_id') | return | endif
+  if &l:buftype ==# 'terminal'
+    execute t:gdbmi_win_jump_window . 'wincmd w'
+  endif
 
-  call sign_jump(t:gdbmi_cursor_sign_id, t:gdbmi_buf_name, t:gdbmi_cursor_sign_id / 10000)
+  if t:gdbmi_cursor_sign_id > 0
+    call sign_jump(t:gdbmi_cursor_sign_id, t:gdbmi_buf_name, t:gdbmi_cursor_sign_id / 10000)
+  endif
+endfunction
+
+function! gdbmi#util#scrolldown() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  let l:winid = win_getid(t:gdbmi_win_jump_window)
+  let l:pos = nvim_win_get_cursor(l:winid)
+  let l:pos[0] += 1
+  call nvim_win_set_cursor(l:winid, l:pos)
+endfunction
+
+function! gdbmi#util#scrollup() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  let l:winid = win_getid(t:gdbmi_win_jump_window)
+  let l:pos = nvim_win_get_cursor(l:winid)
+  let l:pos[0] -= 1
+  call nvim_win_set_cursor(l:winid, l:pos)
 endfunction
 
 "}}}

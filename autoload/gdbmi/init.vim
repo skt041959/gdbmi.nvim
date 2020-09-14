@@ -40,6 +40,19 @@ function! s:DefineCommands()
   command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
 endfunction
 
+function! s:InitAutocmd()
+  augroup GDBMI
+    autocmd!
+    autocmd BufEnter * call gdbmi#util#on_BufEnter()
+    autocmd BufLeave * call gdbmi#util#on_BufLeave()
+    autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
+    autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
+    autocmd TabLeave * call gdbmi#util#on_TabLeave()
+    autocmd TabEnter * call gdbmi#util#on_TabEnter()
+    autocmd TermClose GDBMI_* call gdbmi#init#teardown()
+  augroup END
+endfunction
+
 function! s:StartGDBMI()
   if gdbmi#util#has_yarp()
     try
@@ -76,28 +89,36 @@ function! s:StartGDBMI()
   endif
 endfunction
 
-function! gdbmi#init#Spawn(cmd, mods, newtty) abort
+function! s:CheckPrerequisite() abort
   if has('nvim')
     if !has('python3')
       call gdbmi#util#print_error(
             \ 'gdbmi.nvim requires Neovim with Python3 support("+python3")')
-      return
+      return v:false
     endif
 
     if !has('nvim-0.3.0')
       call gdbmi#util#print_error(
             \ 'gdbmi.nvim requires Neovim +v0.3.0')
-      return
+      return v:false
     endif
+  endif
+
+  return v:true
+endfunction
+
+function! gdbmi#init#Spawn(cmd, mods, newtty) abort
+  if !s:CheckPrerequisite()
+    return
   endif
 
   tab split
 
   if !g:gdbmi_count
     call s:DefineCommands()
+    call s:InitAutocmd()
   endif
   call gdbmi#util#init()
-  call gdbmi#util#sign_init()
 
   call gdbmi#keymaps#init()
 
@@ -110,15 +131,14 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
     return
   endif
 
-  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&channel term://%s', a:mods, a:cmd)
+  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&l:channel term://%s', a:mods, a:cmd)
   exe l:cmd
+  doautocmd BufEnter
 
-  try
-    exe 'file '. t:gdbmi_buf_name
-  catch E95
+  if bufexists(t:gdbmi_buf_name)
     exe 'bw! '.t:gdbmi_buf_name
-    exe 'file '. t:gdbmi_buf_name
-  endtry
+  endif
+  call nvim_buf_set_name(0, t:gdbmi_buf_name)
 
   let t:gdbmi_gdb_win = win_getid()
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
