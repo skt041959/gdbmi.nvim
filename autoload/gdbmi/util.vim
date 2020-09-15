@@ -243,18 +243,24 @@ endfunction
 
 function! gdbmi#util#scrolldown() abort
   if !exists('t:gdbmi_channel_id') | return | endif
-  let l:winid = win_getid(t:gdbmi_win_jump_window)
-  let l:pos = nvim_win_get_cursor(l:winid)
-  let l:pos[0] += 1
-  call nvim_win_set_cursor(l:winid, l:pos)
+  " let l:winid = win_getid(t:gdbmi_win_jump_window)
+  " let l:pos = nvim_win_get_cursor(l:winid)
+  " let l:pos[0] += 1
+  " call nvim_win_set_cursor(l:winid, l:pos)
+  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
+  execute "normal! 3\<c-e>"
+  noautocmd silent! wincmd p
 endfunction
 
 function! gdbmi#util#scrollup() abort
   if !exists('t:gdbmi_channel_id') | return | endif
-  let l:winid = win_getid(t:gdbmi_win_jump_window)
-  let l:pos = nvim_win_get_cursor(l:winid)
-  let l:pos[0] -= 1
-  call nvim_win_set_cursor(l:winid, l:pos)
+  " let l:winid = win_getid(t:gdbmi_win_jump_window)
+  " let l:pos = nvim_win_get_cursor(l:winid)
+  " let l:pos[0] -= 1
+  " call nvim_win_set_cursor(l:winid, l:pos)
+  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
+  execute "normal! 3\<c-y>"
+  noautocmd silent! wincmd p
 endfunction
 
 "}}}
