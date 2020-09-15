@@ -1,6 +1,6 @@
 function! gdbmi#send_line(cmd)
   if has('nvim')
-    call jobsend(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
+    call chansend(t:gdbmi_gdb_job_id, a:cmd."\n")
   else
     call term_sendkeys(t:gdbmi_gdb_job_id, a:cmd."\<CR>")
   endif
