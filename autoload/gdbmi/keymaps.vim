@@ -31,9 +31,9 @@ let s:default_keymaps = [
       \ ['n', 'key_eval',          '<cmd>GDBMIEvalWord<CR>'],
       \ ['n', 'key_ui_display',    '<cmd>GDBMIDisplayWord<CR>'],
       \ ['n', 'key_ui_bringupgdb', '<cmd>call gdbmi#util#bringupgdb()<CR>'],
-      \ ['v', 'key_breakpoint',    '<cmd>GDBMIBreakpointExpr<CR>'],
-      \ ['v', 'key_eval',          '<cmd>GDBMIEvalRange<CR>'],
-      \ ['v', 'key_ui_display',    '<cmd>GDBMIDisplayRange<CR>'],
+      \ ['v', 'key_breakpoint',    ':GDBMIBreakpointExpr<CR>'],
+      \ ['v', 'key_eval',          ':GDBMIEvalRange<CR>'],
+      \ ['v', 'key_ui_display',    ':GDBMIDisplayRange<CR>'],
       \ ['t', 'key_ui_tocode',     '<cmd>call gdbmi#util#jump_to_pcsign()<CR>'],
       \ ['t', 'key_ui_scrolldown', '<cmd>call gdbmi#util#scrolldown()<CR>'],
       \ ['t', 'key_ui_scrollup',   '<cmd>call gdbmi#util#scrollup()<CR>'],
@@ -64,17 +64,7 @@ function! gdbmi#keymaps#init()
   let l:config = copy(get(g:, 'gdbmi_config', s:default_config))
   call extend(l:config, get(g:, 'gdbmi_config_override', {}))
 
-  for key in keys(l:config)
-    let varname = 'g:gdbmi_'.key
-    if exists(varname)
-      let l:config[key] = eval(varname)
-    endif
-  endfor
-
   let t:gdbmi_keymaps_config = l:config
-
-  noremap <plug>GDBMIBringupGDB :<CR>
-  nnoremap <leader>dp :call gdbmi#util#jump_to_pcsign()<CR>
 endfunction
 
 function! gdbmi#keymaps#dispatch_set()

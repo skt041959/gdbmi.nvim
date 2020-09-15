@@ -107,7 +107,7 @@ function! s:CheckPrerequisite() abort
   return v:true
 endfunction
 
-function! gdbmi#init#Spawn(cmd, mods, newtty) abort
+function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   if !s:CheckPrerequisite()
     return
   endif
@@ -136,7 +136,7 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   doautocmd BufEnter
 
   if bufexists(t:gdbmi_buf_name)
-    exe 'bw! '.t:gdbmi_buf_name
+    bwipeout! `=t:gdbmi_buf_name`
   endif
   call nvim_buf_set_name(0, t:gdbmi_buf_name)
 
@@ -144,7 +144,7 @@ function! gdbmi#init#Spawn(cmd, mods, newtty) abort
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
 
-  if a:newtty
+  if a:new_inferior_tty
     exe 'split +let\ t:gdbmi_inferior_tty_job=&channel term://tail -f /dev/null'
     let t:gdbmi_inferior_tty = nvim_get_chan_info(t:gdbmi_inferior_tty_job).pty
     call gdbmi#send('set inferior-tty '.t:gdbmi_inferior_tty)
@@ -160,12 +160,12 @@ function! gdbmi#init#teardown()
 
   if !g:gdbmi_count
     call s:UndefCommands()
-    autocmd! t:gdbmi_buf_name
+    autocmd! `=t:gdbmi_buf_name`
   endif
 
   tabclose
   if !empty(g:gdbmi_delete_after_quit)
-    exe 'bdelete! '.t:gdbmi_buf_name
+    bdelete! `=t:gdbmi_buf_name`
   endif
 endfunction
 
