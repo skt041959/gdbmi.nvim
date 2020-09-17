@@ -18,6 +18,8 @@ let s:default_config = {
       \ 'key_ui_tocode':     '<leader>dp',
       \ 'key_ui_scrolldown': '<down>',
       \ 'key_ui_scrollup':   '<up>',
+      \ 'key_ui_scrollpagedown': '<pagedown>',
+      \ 'key_ui_scrollpageup':   '<pageup>',
       \ 'set_keymaps': function('gdbmi#keymaps#set'),
       \ 'unset_keymaps': function('gdbmi#keymaps#unset'),
       \ }
@@ -46,6 +48,8 @@ let s:default_keymaps = [
       \ ['t', 'key_ui_tocode',     '<cmd>call gdbmi#util#jump_to_pcsign()<CR>'],
       \ ['t', 'key_ui_scrolldown', '<cmd>call gdbmi#util#scrolldown()<CR>'],
       \ ['t', 'key_ui_scrollup',   '<cmd>call gdbmi#util#scrollup()<CR>'],
+      \ ['t', 'key_ui_scrollpagedown', '<cmd>call gdbmi#util#scrollpagedown()<CR>'],
+      \ ['t', 'key_ui_scrollpageup',   '<cmd>call gdbmi#util#scrollpageup()<CR>'],
       \ ]
 
 function! gdbmi#keymaps#set()

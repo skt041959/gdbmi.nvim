@@ -61,11 +61,7 @@ endfunction
 let s:gdbmi_enable_keymap_autocmd = 1
 
 function! gdbmi#util#on_BufEnter() abort
-  if !exists('t:gdbmi_gdb_job_id')
-    return
-  endif
-
-  if !s:gdbmi_enable_keymap_autocmd
+  if !exists('t:gdbmi_gdb_job_id') || !s:gdbmi_enable_keymap_autocmd
     return
   endif
 
@@ -73,15 +69,7 @@ function! gdbmi#util#on_BufEnter() abort
 endfunction
 
 function! gdbmi#util#on_BufLeave() abort
-  if !exists('t:gdbmi_gdb_job_id')
-    return
-  endif
-
-  if !s:gdbmi_enable_keymap_autocmd
-    return
-  endif
-
-  if &buftype ==# 'terminal'
+  if !exists('t:gdbmi_gdb_job_id') || !s:gdbmi_enable_keymap_autocmd
     return
   endif
 
@@ -243,10 +231,6 @@ endfunction
 
 function! gdbmi#util#scrolldown() abort
   if !exists('t:gdbmi_channel_id') | return | endif
-  " let l:winid = win_getid(t:gdbmi_win_jump_window)
-  " let l:pos = nvim_win_get_cursor(l:winid)
-  " let l:pos[0] += 1
-  " call nvim_win_set_cursor(l:winid, l:pos)
   execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
   execute "normal! 3\<c-e>"
   noautocmd silent! wincmd p
@@ -254,12 +238,22 @@ endfunction
 
 function! gdbmi#util#scrollup() abort
   if !exists('t:gdbmi_channel_id') | return | endif
-  " let l:winid = win_getid(t:gdbmi_win_jump_window)
-  " let l:pos = nvim_win_get_cursor(l:winid)
-  " let l:pos[0] -= 1
-  " call nvim_win_set_cursor(l:winid, l:pos)
   execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
   execute "normal! 3\<c-y>"
+  noautocmd silent! wincmd p
+endfunction
+
+function! gdbmi#util#scrollpagedown() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
+  execute "normal! \<c-d>"
+  noautocmd silent! wincmd p
+endfunction
+
+function! gdbmi#util#scrollpageup() abort
+  if !exists('t:gdbmi_channel_id') | return | endif
+  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
+  execute "normal! \<c-u>"
   noautocmd silent! wincmd p
 endfunction
 
