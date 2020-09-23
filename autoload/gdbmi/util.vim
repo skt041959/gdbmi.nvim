@@ -229,31 +229,10 @@ function! gdbmi#util#jump_to_pcsign() abort
   endif
 endfunction
 
-function! gdbmi#util#scrolldown() abort
+function! gdbmi#util#scroll(action) abort
   if !exists('t:gdbmi_channel_id') | return | endif
   execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
-  execute "normal! 3\<c-e>"
-  noautocmd silent! wincmd p
-endfunction
-
-function! gdbmi#util#scrollup() abort
-  if !exists('t:gdbmi_channel_id') | return | endif
-  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
-  execute "normal! 3\<c-y>"
-  noautocmd silent! wincmd p
-endfunction
-
-function! gdbmi#util#scrollpagedown() abort
-  if !exists('t:gdbmi_channel_id') | return | endif
-  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
-  execute "normal! \<c-d>"
-  noautocmd silent! wincmd p
-endfunction
-
-function! gdbmi#util#scrollpageup() abort
-  if !exists('t:gdbmi_channel_id') | return | endif
-  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
-  execute "normal! \<c-u>"
+  execute "normal! " . a:action
   noautocmd silent! wincmd p
 endfunction
 

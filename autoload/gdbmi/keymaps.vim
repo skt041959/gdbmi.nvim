@@ -46,10 +46,10 @@ let s:default_keymaps = [
       \ ['v', 'key_eval',          ':GDBMIEvalRange<CR>'],
       \ ['v', 'key_ui_display',    ':GDBMIDisplayRange<CR>'],
       \ ['t', 'key_ui_tocode',     '<cmd>call gdbmi#util#jump_to_pcsign()<CR>'],
-      \ ['t', 'key_ui_scrolldown', '<cmd>call gdbmi#util#scrolldown()<CR>'],
-      \ ['t', 'key_ui_scrollup',   '<cmd>call gdbmi#util#scrollup()<CR>'],
-      \ ['t', 'key_ui_scrollpagedown', '<cmd>call gdbmi#util#scrollpagedown()<CR>'],
-      \ ['t', 'key_ui_scrollpageup',   '<cmd>call gdbmi#util#scrollpageup()<CR>'],
+      \ ['t', 'key_ui_scrolldown',     '<cmd>call gdbmi#util#scroll("3\<c-e>")<CR>'],
+      \ ['t', 'key_ui_scrollup',       '<cmd>call gdbmi#util#scroll("3\<c-y>")<CR>'],
+      \ ['t', 'key_ui_scrollpagedown', '<cmd>call gdbmi#util#scroll("\<c-d>")<CR>'],
+      \ ['t', 'key_ui_scrollpageup',   '<cmd>call gdbmi#util#scroll("\<c-u>")<CR>'],
       \ ]
 
 function! gdbmi#keymaps#set()
