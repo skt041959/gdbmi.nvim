@@ -59,16 +59,13 @@ function! gdbmi#keymaps#set()
       exe printf('%snoremap <buffer> <silent> %s %s', keymap[0], key, keymap[2])
     endif
   endfor
-
 endfunction
 
 function! gdbmi#keymaps#unset()
   for keymap in s:default_keymaps
-    if has_key(t:gdbmi_keymaps_config, keymap[1])
-      let key = t:gdbmi_keymaps_config[keymap[1]]
-      if !empty(key)
-        exe keymap[0].'unmap <buffer> '.key
-      endif
+    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
+    if !empty(key)
+      exe printf('%sunmap <buffer> %s', keymap[0], key)
     endif
   endfor
 endfunction
