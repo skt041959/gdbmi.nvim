@@ -107,6 +107,8 @@ endfunction
 
 function! gdbmi#util#jump(file, line) abort
   let l:target_buf = bufnr(a:file, 1)
+  call bufload(l:target_buf)
+  call setbufvar(l:target_buf, '&buflisted', v:true)
   let l:target_win = bufwinid(l:target_buf)
   if l:target_win == -1
     let l:target_win = win_getid(t:gdbmi_win_jump_window)
