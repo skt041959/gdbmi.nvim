@@ -53,17 +53,27 @@ let s:default_keymaps = [
       \ ]
 
 function! gdbmi#keymaps#set()
+  if empty(get(b:, 'gdbmi_keymaps_config', {}))
+    let b:gdbmi_keymaps_config = copy(t:gdbmi_keymaps_config)
+  endif
   for keymap in s:default_keymaps
-    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
+    let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
+      if hasmapto(key, keymap[0])
+        let b:gdbmi_keymaps_config[keymap[1]] = ''
+        continue
+      endif
       exe printf('%snoremap <buffer> <silent> %s %s', keymap[0], key, keymap[2])
     endif
   endfor
 endfunction
 
 function! gdbmi#keymaps#unset()
+  if empty(get(b:, 'gdbmi_keymaps_config', {}))
+    return
+  endif
   for keymap in s:default_keymaps
-    let key = get(t:gdbmi_keymaps_config, keymap[1], '')
+    let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
       exe printf('%sunmap <buffer> %s', keymap[0], key)
     endif
