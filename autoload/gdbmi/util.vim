@@ -65,11 +65,19 @@ function! gdbmi#util#on_BufEnter() abort
     return
   endif
 
+  if &filetype =~ 'denite' || &filetype =~ 'defx'
+    return
+  endif
+
   call gdbmi#keymaps#dispatch_set()
 endfunction
 
 function! gdbmi#util#on_BufLeave() abort
   if !exists('t:gdbmi_gdb_job_id') || !s:gdbmi_enable_keymap_autocmd
+    return
+  endif
+
+  if &filetype =~ 'denite' || &filetype =~ 'defx'
     return
   endif
 

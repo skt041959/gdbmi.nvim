@@ -55,13 +55,14 @@ let s:default_keymaps = [
 function! gdbmi#keymaps#set()
   if empty(get(b:, 'gdbmi_keymaps_config', {}))
     let b:gdbmi_keymaps_config = copy(t:gdbmi_keymaps_config)
+    let b:gdbmi_keymaps_restore = {}
   endif
   for keymap in s:default_keymaps
     let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
-      if hasmapto(key, keymap[0])
-        let b:gdbmi_keymaps_config[keymap[1]] = ''
-        continue
+      let origin_map = maparg(key, keymap[0], v:false, v:true)
+      if !empty(origin_map) && origin_map.buffer == 1
+        let b:gdbmi_keymaps_restore[key] = origin_map
       endif
       exe printf('%snoremap <buffer> <silent> %s %s', keymap[0], key, keymap[2])
     endif
@@ -75,7 +76,12 @@ function! gdbmi#keymaps#unset()
   for keymap in s:default_keymaps
     let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
-      exe printf('%sunmap <buffer> %s', keymap[0], key)
+      if !empty(get(b:gdbmi_keymaps_restore, key, {}))
+        let origin_map = b:gdbmi_keymaps_restore[key]
+        exe printf('%smap <buffer> %s %s %s', keymap[0], origin_map.silent ? '<silent>' : '', key, origin_map.rhs)
+      else
+        exe printf('%sunmap <buffer> %s', keymap[0], key)
+      endif
     endif
   endfor
 endfunction
