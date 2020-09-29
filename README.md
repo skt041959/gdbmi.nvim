@@ -28,40 +28,52 @@ or launch with any argument
 
 ## Keymap
 
-| Default Mapping | Command | Description|
-|-----------------|---------|------------|
-|`<leader>dn`|:GDBMINext| `next`|
-|`<leader>ds`|:GDBMIStep| `step`|
-|`<leader>dc`|:GDBMIContinue| `continue`|
-|`<leader>da`|:GDBMIAdvance| `advance`|
-|`<leader>du`|:GDBMIUntil| `until`|
-|`<leader>df`|:GDBMIFinish| `finish`|
-|`<leader>db`|:GDBMIBreakpointToggle| `break`|
-|`<leader>dU`|:GDBMIFrameUp| `up`|
-|`<leader>dD`|:GDBMIFrameDown| `down`|
-|`<leader>de`|:GDBMIEvalWord| `print <cword>`|
+  |Default Mapping   |Mode   |Command                  |Description|
+  |----------------- |------ |------------------------ |------------------------------|
+  |`<leader>dn`      |n      |:GDBMINext               |`next`|
+  |`<leader>ds`      |n      |:GDBMIStep               |`step`|
+  |`<leader>dc`      |n      |:GDBMIContinue           |`continue`|
+  |`<leader>da`      |n      |:GDBMIAdvance            |`advance`|
+  |`<leader>du`      |n      |:GDBMIUntil              |`until`|
+  |`<leader>df`      |n      |:GDBMIFinish             |`finish`|
+  |`<leader>db`      |n,v    |:GDBMIBreakpointToggle   |`break`|
+  |`<leader>dU`      |n      |:GDBMIFrameUp            |`up`|
+  |`<leader>dD`      |n      |:GDBMIFrameDown          |`down`|
+  |`<leader>de`      |n,v    |:GDBMIEvalWord           |`print <cword>`|
+  |`<up>`            |t      |                         |scroll code window up|
+  |`<down>`          |t      |                         |scroll code window down|
+  |`<pageup>`        |t      |                         |scroll code window page up|
+  |`<pagedown>`      |t      |                         |scroll code window page down|
 
 ### Change keymap
 
-``` viml
+``` {.viml}
 let g:gdbmi_config = {
-      \ 'key_until':        '<leader>du',
-      \ 'key_continue':     '<leader>dc',
-      \ 'key_next':         '<leader>dn',
-      \ 'key_step':         '<leader>ds',
-      \ 'key_finish':       '<leader>df',
-      \ 'key_breakpoint':   '<leader>db',
-      \ 'key_frameup':      '<leader>dU',
-      \ 'key_framedown':    '<leader>dD',
-      \ 'key_eval':         '<leader>de',
-      \ 'key_ui_display':   '<leader>dw',
-      \ 'key_ui_bringupgdb':  '<F7>',
+      \ 'key_until':             '<leader>du',
+      \ 'key_advance':           '<leader>da',
+      \ 'key_continue':          '<leader>dc',
+      \ 'key_next':              '<leader>dn',
+      \ 'key_step':              '<leader>ds',
+      \ 'key_finish':            '<leader>df',
+      \ 'key_reverse_continue':  '<leader>dC',
+      \ 'key_reverse_next':      '<leader>dN',
+      \ 'key_reverse_step':      '<leader>dS',
+      \ 'key_reverse_finish':    '<leader>dF',
+      \ 'key_breakpoint':        '<leader>db',
+      \ 'key_frameup':           '<leader>dU',
+      \ 'key_framedown':         '<leader>dD',
+      \ 'key_eval':              '<leader>de',
+      \ 'key_ui_bringupgdb':     '<leader>d<space>',
+      \ 'key_ui_tocode':         '<leader>dp',
+      \ 'key_ui_scrolldown':     '<down>',
+      \ 'key_ui_scrollup':       '<up>',
+      \ 'key_ui_scrollpagedown': '<pagedown>',
+      \ 'key_ui_scrollpageup':   '<pageup>',
       \ }
 ```
 
 ## To-do
 - fix bringing up gdb in different tabpage
-- fix BufReadPost event in new buffer
 - add support for multi inferior
 
 ## Inspire
