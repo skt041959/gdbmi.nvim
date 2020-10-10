@@ -113,6 +113,9 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   endif
 
   tab split
+  if g:gdbmi_disable_autoread
+    setglobal noautoread
+  endif
 
   if !g:gdbmi_count
     call s:DefineCommands()
@@ -144,9 +147,12 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
 
-  if a:new_inferior_tty
-    exe 'split +let\ t:gdbmi_inferior_tty_job=&channel term://tail -f /dev/null'
-    let t:gdbmi_inferior_tty = nvim_get_chan_info(t:gdbmi_inferior_tty_job).pty
+  if a:new_inferior_tty !=? 'no'
+    split term://tail -f /dev/null
+    let t:gdbmi_inferior_tty = nvim_get_chan_info(&channel).pty
+    if a:new_inferior_tty ==? 'hide'
+      close
+    endif
     call gdbmi#send('set inferior-tty '.t:gdbmi_inferior_tty)
   endif
 endfunction
