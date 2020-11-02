@@ -155,6 +155,10 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
     endif
     call gdbmi#send('set inferior-tty '.t:gdbmi_inferior_tty)
   endif
+
+  for cmd in g:gdbmi_run_commands
+    call gdbmi#send(cmd)
+  endfor
 endfunction
 
 function! gdbmi#init#teardown()

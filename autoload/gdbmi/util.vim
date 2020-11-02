@@ -3,18 +3,24 @@ function! gdbmi#util#print_error(msg) abort
 endfunction
 
 function! gdbmi#util#has_yarp() abort
-  return !has('nvim')
+  if !g:gdbmi_use_yarp
+    return v:false
+  else
+    runtime autoload/yarp.vim
+    return exists('*yarp#py3')
+  endif
 endfunction
 
 function! gdbmi#util#sign_init() abort
   let s:bp_symbol = get(g:, 'gdbmi#sign#bp_symbol', 'B>')
   let s:pc_symbol = get(g:, 'gdbmi#sign#pc_symbol', '->')
 
+  highlight default GDBMIDefaultSelectedPCLine gui=bold,italic,underline
   exe 'highlight default link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
   exe 'highlight default link GDBMIUnselectedPCSign'.t:gdbmi_buf_name.' NonText'
   exe 'highlight default link GDBMIUnselectedPCLine'.t:gdbmi_buf_name.' DiffChange'
   exe 'highlight default link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
-  exe 'highlight default link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
+  exe 'highlight default link GDBMISelectedPCLine'.t:gdbmi_buf_name.' GDBMIDefaultSelectedPCLine'
 
   exe 'sign define GdbmiBreakpoint'.t:gdbmi_buf_name.
         \ ' text=' . s:bp_symbol .
@@ -39,7 +45,7 @@ function! gdbmi#util#sign_hide() abort
 endfunction
 
 function! gdbmi#util#sign_reset() abort
-  exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Visual'
+  exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' GDBMIDefaultSelectedPCLine'
   exe 'highlight link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
   exe 'highlight link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
 endfunction
