@@ -16,11 +16,7 @@ function! gdbmi#util#sign_init() abort
   let s:pc_symbol = get(g:, 'gdbmi#sign#pc_symbol', '->')
 
   highlight default GDBMIDefaultSelectedPCLine gui=bold,italic,underline
-  exe 'highlight default link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
-  exe 'highlight default link GDBMIUnselectedPCSign'.t:gdbmi_buf_name.' NonText'
-  exe 'highlight default link GDBMIUnselectedPCLine'.t:gdbmi_buf_name.' DiffChange'
-  exe 'highlight default link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
-  exe 'highlight default link GDBMISelectedPCLine'.t:gdbmi_buf_name.' GDBMIDefaultSelectedPCLine'
+  call gdbmi#util#sign_reset()
 
   exe 'sign define GdbmiBreakpoint'.t:gdbmi_buf_name.
         \ ' text=' . s:bp_symbol .
@@ -39,15 +35,17 @@ function! gdbmi#util#sign_init() abort
 endfunction
 
 function! gdbmi#util#sign_hide() abort
-  exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' Normal'
-  exe 'highlight link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Normal'
-  exe 'highlight link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Normal'
+  exe 'highlight GDBMISelectedPCLine'.t:gdbmi_buf_name.' guifg=NONE guibg=NONE'
+  exe 'highlight GDBMISelectedPCSign'.t:gdbmi_buf_name.' guifg=NONE guibg=NONE'
+  exe 'highlight GDBMIBreakpointSign'.t:gdbmi_buf_name.' guifg=NONE guibg=NONE'
 endfunction
 
 function! gdbmi#util#sign_reset() abort
   exe 'highlight link GDBMISelectedPCLine'.t:gdbmi_buf_name.' GDBMIDefaultSelectedPCLine'
   exe 'highlight link GDBMISelectedPCSign'.t:gdbmi_buf_name.' Debug'
   exe 'highlight link GDBMIBreakpointSign'.t:gdbmi_buf_name.' Type'
+  " exe 'highlight link GDBMIUnselectedPCSign'.t:gdbmi_buf_name.' NonText'
+  " exe 'highlight link GDBMIUnselectedPCLine'.t:gdbmi_buf_name.' DiffChange'
 endfunction
 
 function! gdbmi#util#init() abort
