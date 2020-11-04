@@ -134,9 +134,9 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
     return
   endif
 
-  let l:cmd = printf('%s split +let\ t:gdbmi_gdb_job_id=&l:channel term://%s', a:mods, a:cmd)
-  exe l:cmd
-  doautocmd BufEnter
+  execute printf('%s split term://%s', a:mods, a:cmd)
+  let t:gdbmi_gdb_job_id = &l:channel
+  call gdbmi#util#on_BufEnter()
 
   if bufexists(t:gdbmi_buf_name)
     bwipeout! `=t:gdbmi_buf_name`
@@ -149,7 +149,8 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
 
   if a:new_inferior_tty !=? 'no'
     split term://tail -f /dev/null
-    let t:gdbmi_inferior_tty = nvim_get_chan_info(&channel).pty
+    file `=t:gdbmi_buf_name . '_inferior_term'`
+    let t:gdbmi_inferior_tty = nvim_get_chan_info(&l:channel).pty
     if a:new_inferior_tty ==? 'hide'
       close
     endif
