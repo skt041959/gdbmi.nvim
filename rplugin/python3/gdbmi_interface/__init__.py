@@ -19,7 +19,7 @@ if hasattr(vim, 'plugin'):
 
         def __init__(self, vim):
             self.vim = vim
-            self.vim.vars['gdbmi#_channel_id'] = self.vim.channel_id
+            self.vim.vars['gdbmi_channel_id'] = self.vim.channel_id
             self.rplugin = GDBMI_rplugin(vim)
 
         @vim.function('_gdbmi_start', sync=True)

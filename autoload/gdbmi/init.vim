@@ -43,13 +43,12 @@ endfunction
 function! s:InitAutocmd()
   augroup GDBMI
     autocmd!
-    autocmd BufEnter * call gdbmi#util#on_BufEnter()
-    autocmd BufLeave * call gdbmi#util#on_BufLeave()
+    autocmd BufEnter    *       call gdbmi#util#on_BufEnter()
+    autocmd BufLeave    *       call gdbmi#util#on_BufLeave()
     autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
-    autocmd BufHidden GDBMI_* call gdbmi#util#on_BufHidden()
-    autocmd TabLeave * call gdbmi#util#on_TabLeave()
-    autocmd TabEnter * call gdbmi#util#on_TabEnter()
-    autocmd TermClose GDBMI_* call gdbmi#init#teardown()
+    autocmd BufHidden   GDBMI_* call gdbmi#util#on_BufHidden()
+    autocmd TabLeave    *       call gdbmi#util#on_TabLeave()
+    autocmd TabEnter    *       call gdbmi#util#on_TabEnter()
   augroup END
 endfunction
 
@@ -58,8 +57,8 @@ function! s:StartGDBMI()
     try
       let t:gdbmi_yarp = yarp#py3('gdbmi_interface')
       let l:tty = t:gdbmi_yarp.request('_gdbmi_start', t:gdbmi_buf_name)
-      let g:gdbmi#_channel_id = 1
-      let t:gdbmi_channel_id = g:gdbmi#_channel_id
+      let g:gdbmi_channel_id = 1
+      let t:gdbmi_channel_id = g:gdbmi_channel_id
       return l:tty
     catch
       echo v:exception
@@ -77,7 +76,7 @@ function! s:StartGDBMI()
   else
     try
       call _gdbmi_start(t:gdbmi_buf_name)
-      let t:gdbmi_channel_id = g:gdbmi#_channel_id
+      let t:gdbmi_channel_id = g:gdbmi_channel_id
       return gdbmi#util#rpcrequest('gdbmi_getslave', t:gdbmi_buf_name)
     catch
       echo v:exception
@@ -142,6 +141,7 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
     bwipeout! `=t:gdbmi_buf_name`
   endif
   call nvim_buf_set_name(0, t:gdbmi_buf_name)
+  execute "autocmd GDBMI TermClose" t:gdbmi_buf_name "call gdbmi#init#teardown()"
 
   let t:gdbmi_gdb_win = win_getid()
   call gdbmi#send('new-ui mi '.l:new_ui_tty)

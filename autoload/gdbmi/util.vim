@@ -235,7 +235,7 @@ endfunction
 function! gdbmi#util#jump_to_pcsign() abort
   if !exists('t:gdbmi_channel_id') | return | endif
   if &l:buftype ==# 'terminal'
-    execute t:gdbmi_win_jump_window . 'wincmd w'
+    execute t:gdbmi_win_jump_window 'wincmd w'
   endif
 
   if t:gdbmi_cursor_sign_id > 0
@@ -245,8 +245,8 @@ endfunction
 
 function! gdbmi#util#scroll(action) abort
   if !exists('t:gdbmi_channel_id') | return | endif
-  execute 'noautocmd silent! ' . t:gdbmi_win_jump_window . 'wincmd w'
-  execute "normal! " . a:action
+  execute 'noautocmd silent!' t:gdbmi_win_jump_window 'wincmd w'
+  execute "normal! " a:action
   noautocmd silent! wincmd p
 endfunction
 
