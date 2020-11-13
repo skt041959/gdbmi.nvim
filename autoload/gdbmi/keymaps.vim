@@ -55,8 +55,8 @@ let s:default_keymaps = [
 function! gdbmi#keymaps#set()
   if empty(get(b:, 'gdbmi_keymaps_config', {}))
     let b:gdbmi_keymaps_config = copy(t:gdbmi_keymaps_config)
-    let b:gdbmi_keymaps_restore = {}
   endif
+  let b:gdbmi_keymaps_restore = {}
   for keymap in s:default_keymaps
     let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
@@ -70,15 +70,20 @@ function! gdbmi#keymaps#set()
 endfunction
 
 function! gdbmi#keymaps#unset()
-  if empty(get(b:, 'gdbmi_keymaps_config', {}))
+  if empty(get(b:, 'gdbmi_keymaps_config', {})) || !exists('b:gdbmi_keymaps_restore')
     return
   endif
   for keymap in s:default_keymaps
     let key = get(b:gdbmi_keymaps_config, keymap[1], '')
     if !empty(key)
-      if !empty(get(b:gdbmi_keymaps_restore, key, {}))
-        let origin_map = b:gdbmi_keymaps_restore[key]
-        exe printf('%smap <buffer> %s %s %s', keymap[0], origin_map.silent ? '<silent>' : '', key, origin_map.rhs)
+      let origin_map = get(b:gdbmi_keymaps_restore, key, {})
+      if !empty(origin_map)
+        exe printf('%s %s %s %s',
+              \ origin_map.noremap ? 'nnoremap' : 'nmap',
+              \ join(map(['buffer', 'expr', 'nowait', 'silent'],
+              \          'origin_map[v:val] ? "<" . v:val . ">": ""')),
+              \ key,
+              \ substitute(origin_map.rhs, '<SID>', '<SNR>' . origin_map.sid . '_', 'g'))
       else
         exe printf('%sunmap <buffer> %s', keymap[0], key)
       endif
@@ -93,15 +98,3 @@ function! gdbmi#keymaps#init()
   let t:gdbmi_keymaps_config = l:config
 endfunction
 
-function! gdbmi#keymaps#dispatch_set()
-  if !exists('t:gdbmi_keymaps_config') | return | endif
-  call t:gdbmi_keymaps_config['set_keymaps']()
-endfunction
-
-function! gdbmi#keymaps#dispatch_unset()
-  if !exists('t:gdbmi_keymaps_config') | return | endif
-  try
-    call t:gdbmi_keymaps_config['unset_keymaps']()
-  catch /.*/
-  endtry
-endfunction

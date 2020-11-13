@@ -56,8 +56,8 @@ function! gdbmi#util#init() abort
   let t:gdbmi_win_current_buf = -1
 
   let t:gdbmi_cursor_line = -1
-  let t:gdbmi_cursor_sign_id = 0
-  
+  let t:gdbmi_cursor_sign_id = -1
+
   let t:gdbmi_breakpoints_sign_ids = []
   call gdbmi#util#sign_init()
 endfunction
@@ -73,7 +73,7 @@ function! gdbmi#util#on_BufEnter() abort
     return
   endif
 
-  call gdbmi#keymaps#dispatch_set()
+  call t:gdbmi_keymaps_config['set_keymaps']()
 endfunction
 
 function! gdbmi#util#on_BufLeave() abort
@@ -85,7 +85,7 @@ function! gdbmi#util#on_BufLeave() abort
     return
   endif
 
-  call gdbmi#keymaps#dispatch_unset()
+  call t:gdbmi_keymaps_config['unset_keymaps']()
 endfunction
 
 function! gdbmi#util#on_BufWinEnter() abort
@@ -131,6 +131,7 @@ function! gdbmi#util#jump(file, line) abort
   endif
 
   call nvim_win_set_cursor(l:target_win, [str2nr(a:line), 1])
+  return l:target_buf
 endfunction
 
 function! gdbmi#util#jump_frame(file, line) abort
@@ -138,27 +139,19 @@ function! gdbmi#util#jump_frame(file, line) abort
     call gdbmi#util#clear_cursor_sign()
     return
   endif
-  call gdbmi#util#jump(a:file, a:line)
+  let t:gdbmi_win_current_buf = gdbmi#util#jump(a:file, a:line)
   call gdbmi#util#set_cursor_sign(a:file, a:line)
 endfunction
 
 function! gdbmi#util#set_cursor_sign(file, line) abort
-  let l:old = t:gdbmi_cursor_sign_id
+  call sign_unplace(t:gdbmi_buf_name, {'id': t:gdbmi_cursor_sign_id})
 
-  let t:gdbmi_win_current_buf = bufnr(a:file, 1)
-  let t:gdbmi_new_cursor_line = a:line
-
-  let t:gdbmi_cursor_sign_id = t:gdbmi_win_current_buf * 10000 + float2nr(fmod(l:old, 10000)) + 1
-  if t:gdbmi_new_cursor_line != -1 && t:gdbmi_win_current_buf != -1
-    call sign_place(t:gdbmi_cursor_sign_id,
-          \ t:gdbmi_buf_name,
-          \ 'GdbmiCurrentLine'.t:gdbmi_buf_name,
-          \ t:gdbmi_win_current_buf,
-          \ {'lnum': t:gdbmi_new_cursor_line})
-  endif
-  if l:old != 0
-    call sign_unplace(t:gdbmi_buf_name, {'id': l:old})
-  endif
+  let t:gdbmi_cursor_sign_id = t:gdbmi_win_current_buf * 10000 + float2nr(fmod(t:gdbmi_cursor_sign_id, 10000)) + 1
+  call sign_place(t:gdbmi_cursor_sign_id,
+        \ t:gdbmi_buf_name,
+        \ 'GdbmiCurrentLine'.t:gdbmi_buf_name,
+        \ t:gdbmi_win_current_buf,
+        \ {'lnum': a:line})
 endfunction
 
 function! gdbmi#util#clear_cursor_sign() abort
@@ -203,7 +196,7 @@ endfunction
 function! gdbmi#util#bringupgdb() abort
   if !exists('t:gdbmi_channel_id') | return | endif
 
-  if exists('t:gdbmi_gdb_win') && !empty(t:gdbmi_gdb_win)
+  if !empty(get(t:, 'gdbmi_gdb_win', 0))
     call win_gotoid(t:gdbmi_gdb_win)
     startinsert
   elseif bufexists(t:gdbmi_buf_name)
@@ -246,7 +239,7 @@ endfunction
 function! gdbmi#util#scroll(action) abort
   if !exists('t:gdbmi_channel_id') | return | endif
   execute 'noautocmd silent!' t:gdbmi_win_jump_window 'wincmd w'
-  execute "normal! " a:action
+  execute 'normal!' a:action
   noautocmd silent! wincmd p
 endfunction
 
