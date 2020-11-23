@@ -135,6 +135,7 @@ function! gdbmi#util#jump(file, line) abort
 endfunction
 
 function! gdbmi#util#jump_frame(file, line) abort
+  if !exists('t:gdbmi_channel_id') | return | endif
   if !filereadable(a:file)
     call gdbmi#util#clear_cursor_sign()
     return
