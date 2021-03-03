@@ -14,7 +14,7 @@ let s:default_config = {
       \ 'key_framedown':     '<leader>dD',
       \ 'key_eval':          '<leader>de',
       \ 'key_ui_display':    '<leader>dw',
-      \ 'key_ui_bringupgdb': '<leader>d<space>',
+      \ 'key_ui_bringupgdb': '<leader>dd',
       \ 'key_ui_tocode':     '<leader>dp',
       \ 'key_ui_scrolldown': '<down>',
       \ 'key_ui_scrollup':   '<up>',

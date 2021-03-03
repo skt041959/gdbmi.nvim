@@ -24,7 +24,7 @@ You can use MingW Python or use Cygwin environment.
 
 or launch with any argument
 
-`:GDBMILaunch /usr/bin/gdb --pid 'pid'`
+`:GDBMILaunch /usr/bin/gdb --pid <pid>`
 
 ## Keymap
 
@@ -40,6 +40,8 @@ or launch with any argument
   |`<leader>dU`      |n      |:GDBMIFrameUp            |`up`|
   |`<leader>dD`      |n      |:GDBMIFrameDown          |`down`|
   |`<leader>de`      |n,v    |:GDBMIEvalWord           |`print <cword>`|
+  |`<leader>dp`      |n      |                         |jump to the current line in code window|
+  |`<leader>dd`      |n      |                         |jump to or raise up the gdb window|
   |`<up>`            |t      |                         |scroll code window up|
   |`<down>`          |t      |                         |scroll code window down|
   |`<pageup>`        |t      |                         |scroll code window page up|
@@ -63,12 +65,18 @@ let g:gdbmi_config = {
       \ 'key_frameup':           '<leader>dU',
       \ 'key_framedown':         '<leader>dD',
       \ 'key_eval':              '<leader>de',
-      \ 'key_ui_bringupgdb':     '<leader>d<space>',
+      \ 'key_ui_bringupgdb':     '<leader>dd',
       \ 'key_ui_tocode':         '<leader>dp',
       \ 'key_ui_scrolldown':     '<down>',
       \ 'key_ui_scrollup':       '<up>',
       \ 'key_ui_scrollpagedown': '<pagedown>',
       \ 'key_ui_scrollpageup':   '<pageup>',
+      \ }
+```
+or
+``` {.viml}
+let g:gdbmi_config_override = {
+      \ 'key_continue':          '<F5>',
       \ }
 ```
 
