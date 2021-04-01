@@ -53,9 +53,7 @@ let s:default_keymaps = [
       \ ]
 
 function! gdbmi#keymaps#set()
-  if empty(get(b:, 'gdbmi_keymaps_config', {}))
-    let b:gdbmi_keymaps_config = copy(t:gdbmi_keymaps_config)
-  endif
+  let b:gdbmi_keymaps_config = copy(t:gdbmi_keymaps_config)
   let b:gdbmi_keymaps_restore = {}
   for keymap in s:default_keymaps
     let key = get(b:gdbmi_keymaps_config, keymap[1], '')
@@ -96,5 +94,11 @@ function! gdbmi#keymaps#init()
   call extend(l:config, get(g:, 'gdbmi_config_override', {}))
 
   let t:gdbmi_keymaps_config = l:config
+endfunction
+
+function! gdbmi#keymaps#update()
+  call gdbmi#keymaps#unset()
+  call gdbmi#keymaps#init()
+  call gdbmi#keymaps#set()
 endfunction
 
