@@ -46,6 +46,10 @@ if hasattr(vim, 'plugin'):
         def stop(self, args):
             self.rplugin.stop(args)
 
+        @vim.rpc_export('gdbmi_getbreakpoints', sync=True)
+        def breakpoints(self, args):
+            return self.rplugin.breakpoints(args)
+
 elif find_spec('yarp'):
 
     gdbmi = GDBMI_rplugin(vim)

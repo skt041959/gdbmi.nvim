@@ -40,3 +40,7 @@ class GDBMI_rplugin():
         session_name, expr = args
         self.sessions[session_name].add_display(expr)
 
+    def breakpoints(self, args):
+        session_name, *_ = args
+        return self.sessions[session_name].get_breakpoints()
+

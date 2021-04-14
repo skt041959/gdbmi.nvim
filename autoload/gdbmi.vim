@@ -37,6 +37,14 @@ function! gdbmi#toggle_break_line()
   call gdbmi#send(l:cmd)
 endfunction
 
+function! gdbmi#get_breakpoint_list() abort
+  if !exists('t:gdbmi_gdb_job_id') | return | endif
+
+  let g:gdbmi_jump_locations = gdbmi#util#rpcrequest('gdbmi_getbreakpoints', t:gdbmi_buf_name)
+
+  doautocmd <nomodeline> User GDBMILocationChange
+endfunction
+
 function! gdbmi#break_expr(expr)
   call gdbmi#send(printf('break %s', a:expr))
 endfunction

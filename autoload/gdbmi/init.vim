@@ -38,6 +38,7 @@ function! s:DefineCommands()
   command! -range GDBMIBreakpointExpr call gdbmi#break_expr(gdbmi#util#get_selection(<f-args>))
 
   command! -nargs=1 GDBMIDisplay call gdbmi#display(<f-args>)
+  command! GDBMIListBreakpoints call gdbmi#get_breakpoint_list()
 endfunction
 
 function! s:InitAutocmd()
@@ -49,6 +50,7 @@ function! s:InitAutocmd()
     autocmd BufHidden   GDBMI_* call gdbmi#util#on_BufHidden()
     autocmd TabLeave    *       call gdbmi#util#on_TabLeave()
     autocmd TabEnter    *       call gdbmi#util#on_TabEnter()
+    autocmd User GDBMILocationChange Denite gdbmi-locations
   augroup END
 endfunction
 

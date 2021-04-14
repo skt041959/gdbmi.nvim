@@ -229,6 +229,13 @@ class Session(object):
         else:
             return 0
 
+    def get_breakpoints(self):
+        results = []
+        for number, bkpt in self.breakpoints.items():
+            if bkpt["type"] == "breakpoint" and bkpt["addr"] != "<MULTIPLE>":
+                results.append({"filename": bkpt["fullname"], "lnum": bkpt["line"], "text": ""})
+        return results
+
     def wait_for(self, token):
         self.debug("waiting for {}".format(token))
         return self.commands[token]["waiting"].wait()
