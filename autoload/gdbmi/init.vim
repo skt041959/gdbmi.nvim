@@ -146,7 +146,7 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   execute "autocmd GDBMI TermClose" t:gdbmi_buf_name "call gdbmi#init#teardown()"
 
   let t:gdbmi_gdb_win = win_getid()
-  call gdbmi#send('echo')
+  call gdbmi#send('echo hello gdbmi.nvim\n')
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
 
