@@ -150,13 +150,13 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
 
-  if a:new_inferior_tty !=? 'no'
+  if a:new_inferior_tty !=? 'none'
     split term://tail -f /dev/null
     file `=t:gdbmi_buf_name . '_inferior_term'`
     tnoremap <buffer> <C-c> <nop>
     let t:gdbmi_inferior_tty = nvim_get_chan_info(&l:channel).pty
     if a:new_inferior_tty ==? 'hide'
-      close
+      hide
     endif
     call gdbmi#send('set inferior-tty '.t:gdbmi_inferior_tty)
   endif
@@ -178,9 +178,9 @@ function! gdbmi#init#teardown()
     autocmd! `=t:gdbmi_buf_name`
   endif
 
-  tabclose
-  if !empty(g:gdbmi_delete_after_quit)
-    bdelete! `=t:gdbmi_buf_name`
-  endif
+  " tabclose
+  " if !empty(g:gdbmi_delete_after_quit)
+  "   bdelete! `=t:gdbmi_buf_name`
+  " endif
 endfunction
 
