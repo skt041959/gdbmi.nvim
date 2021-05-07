@@ -69,7 +69,11 @@ function! gdbmi#util#on_BufEnter() abort
     return
   endif
 
-  if &filetype =~ 'denite' || &filetype =~ 'defx'
+  if &buftype == 'nofile'
+    return
+  endif
+
+  if &buftype ==# 'terminal' && bufname() !=# t:gdbmi_buf_name
     return
   endif
 
@@ -81,7 +85,11 @@ function! gdbmi#util#on_BufLeave() abort
     return
   endif
 
-  if &filetype =~ 'denite' || &filetype =~ 'defx'
+  if &buftype == 'nofile'
+    return
+  endif
+
+  if &buftype ==# 'terminal' && bufname() !=# t:gdbmi_buf_name
     return
   endif
 
