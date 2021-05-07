@@ -15,6 +15,7 @@ function! s:UndefCommands()
   delcommand GDBMIInterrupt
   delcommand GDBMIEvalWord
   delcommand GDBMIDisplay
+  delcommand GDBMIListBreakpoints
 endfunction
 
 function! s:DefineCommands()
