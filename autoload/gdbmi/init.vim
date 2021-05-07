@@ -153,6 +153,7 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   if a:new_inferior_tty !=? 'no'
     split term://tail -f /dev/null
     file `=t:gdbmi_buf_name . '_inferior_term'`
+    tnoremap <buffer> <C-c> <nop>
     let t:gdbmi_inferior_tty = nvim_get_chan_info(&l:channel).pty
     if a:new_inferior_tty ==? 'hide'
       close
