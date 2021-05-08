@@ -153,7 +153,9 @@ function! gdbmi#util#jump_frame(file, line) abort
 endfunction
 
 function! gdbmi#util#set_cursor_sign(file, line) abort
-  call sign_unplace(t:gdbmi_buf_name, {'id': t:gdbmi_cursor_sign_id})
+  if t:gdbmi_cursor_sign_id > 0
+    call sign_unplace(t:gdbmi_buf_name, {'id': t:gdbmi_cursor_sign_id})
+  endif
 
   let t:gdbmi_cursor_sign_id = t:gdbmi_win_current_buf * 10000 + float2nr(fmod(t:gdbmi_cursor_sign_id, 10000)) + 1
   call sign_place(t:gdbmi_cursor_sign_id,
