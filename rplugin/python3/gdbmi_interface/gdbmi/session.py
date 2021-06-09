@@ -233,7 +233,7 @@ class Session(object):
         results = []
         for number, bkpt in self.breakpoints.items():
             if bkpt["type"] == "breakpoint" and bkpt["addr"] != "<MULTIPLE>":
-                results.append({"filename": bkpt["fullname"], "lnum": bkpt["line"], "text": ""})
+                results.append({"number": number, "filename": bkpt["fullname"], "lnum": bkpt["line"], "text": bkpt["func"]})
         return results
 
     def wait_for(self, token):
