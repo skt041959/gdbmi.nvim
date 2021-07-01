@@ -150,6 +150,7 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   call gdbmi#send('echo hello gdbmi.nvim\n')
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')
+  call gdbmi#send('set pagination off')
 
   if a:new_inferior_tty !=? 'none'
     split term://tail -f /dev/null
