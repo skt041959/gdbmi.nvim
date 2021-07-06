@@ -136,12 +136,14 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
 
   execute printf('%s split term://%s', a:mods, a:cmd)
   let t:gdbmi_gdb_job_id = &l:channel
-  call gdbmi#util#on_BufEnter()
 
   if bufexists(t:gdbmi_buf_name)
     bwipeout! `=t:gdbmi_buf_name`
   endif
   call nvim_buf_set_name(0, t:gdbmi_buf_name)
+  call gdbmi#util#on_BufEnter()
+  " noautocmd windo call gdbmi#keymaps#set()
+
   execute "autocmd GDBMI TermClose" t:gdbmi_buf_name "call gdbmi#init#teardown()"
 
   call gdbmi#send('echo hello gdbmi.nvim\n')
