@@ -47,8 +47,6 @@ function! s:InitAutocmd()
     autocmd!
     autocmd BufEnter    *       call gdbmi#util#on_BufEnter()
     autocmd BufLeave    *       call gdbmi#util#on_BufLeave()
-    autocmd BufWinEnter GDBMI_* call gdbmi#util#on_BufWinEnter()
-    autocmd BufHidden   GDBMI_* call gdbmi#util#on_BufHidden()
     autocmd TabLeave    *       call gdbmi#util#on_TabLeave()
     autocmd TabEnter    *       call gdbmi#util#on_TabEnter()
     autocmd User GDBMILocationChange Denite gdbmi-locations
@@ -146,7 +144,6 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
   call nvim_buf_set_name(0, t:gdbmi_buf_name)
   execute "autocmd GDBMI TermClose" t:gdbmi_buf_name "call gdbmi#init#teardown()"
 
-  let t:gdbmi_gdb_win = win_getid()
   call gdbmi#send('echo hello gdbmi.nvim\n')
   call gdbmi#send('new-ui mi '.l:new_ui_tty)
   call gdbmi#send('set annotate 1')

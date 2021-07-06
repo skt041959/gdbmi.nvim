@@ -96,20 +96,6 @@ function! gdbmi#util#on_BufLeave() abort
   call t:gdbmi_keymaps_config['unset_keymaps']()
 endfunction
 
-function! gdbmi#util#on_BufWinEnter() abort
-  if !exists('t:gdbmi_channel_id') | return | endif
-  if t:gdbmi_buf_name ==# expand('<afile>')
-    let t:gdbmi_gdb_win = win_getid()
-  endif
-endfunction
-
-function! gdbmi#util#on_BufHidden() abort
-  if !exists('t:gdbmi_channel_id') | return | endif
-  if t:gdbmi_buf_name ==# expand('<afile>')
-    let t:gdbmi_gdb_win = 0
-  endif
-endfunction
-
 function! gdbmi#util#on_TabLeave() abort
   if !exists('t:gdbmi_channel_id') | return | endif
   call gdbmi#util#sign_hide()
@@ -207,8 +193,9 @@ endfunction
 function! gdbmi#util#bringupgdb() abort
   if !exists('t:gdbmi_channel_id') | return | endif
 
-  if !empty(get(t:, 'gdbmi_gdb_win', 0))
-    call win_gotoid(t:gdbmi_gdb_win)
+  let gdb_win = bufwinid(t:gdbmi_buf_name)
+  if gdb_win != -1
+    call win_gotoid(gdb_win)
     startinsert
   elseif bufexists(t:gdbmi_buf_name)
     exe 'botright split '.t:gdbmi_buf_name
