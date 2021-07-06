@@ -68,7 +68,7 @@ function! gdbmi#keymaps#set()
 endfunction
 
 function! gdbmi#keymaps#unset()
-  if empty(get(b:, 'gdbmi_keymaps_config', {})) || !exists('b:gdbmi_keymaps_restore')
+  if !exists('b:gdbmi_keymaps_config') || !exists('b:gdbmi_keymaps_restore')
     return
   endif
   for keymap in s:default_keymaps
@@ -87,6 +87,7 @@ function! gdbmi#keymaps#unset()
       endif
     endif
   endfor
+  let b:gdbmi_keymaps_config = {}
 endfunction
 
 function! gdbmi#keymaps#init()
