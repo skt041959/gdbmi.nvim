@@ -88,6 +88,7 @@ function! gdbmi#keymaps#unset()
     endif
   endfor
   let b:gdbmi_keymaps_config = {}
+  let b:gdbmi_keymaps_restore = {}
 endfunction
 
 function! gdbmi#keymaps#init()
