@@ -112,7 +112,7 @@ function! gdbmi#init#Spawn(cmd, mods, new_inferior_tty) abort
     return
   endif
 
-  tab split
+  tab split | tabmove
   if g:gdbmi_disable_autoread
     setglobal noautoread
   endif
