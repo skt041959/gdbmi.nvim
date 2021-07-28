@@ -1,4 +1,3 @@
-
 # encoding: utf-8
 
 import re
@@ -33,20 +32,35 @@ NL = r'(?P<NL>\n)'
 ASSIGN = r'(?P<ASSIGN>=)'
 
 
-master_pat = re.compile('|'.join([TOKEN_NUM, RESULT_CLASS,
-                                  EXEC_CLASS, STATUS_CLASS, NOTIFY_CLASS,
-                                  CONSOLE_OUTPUT, TARGET_OUTPUT, LOG_OUTPUT,
-                                  L_TUPLE, R_TUPLE,
-                                  L_LIST, R_LIST,
-                                  #  TUPLE, LIST,
-                                  VARIABLE, CONST,
-                                  GDB, COMMA, NL, ASSIGN,
-                                  ])
-                        )
+master_pat = re.compile(
+    '|'.join(
+        [
+            TOKEN_NUM,
+            RESULT_CLASS,
+            EXEC_CLASS,
+            STATUS_CLASS,
+            NOTIFY_CLASS,
+            CONSOLE_OUTPUT,
+            TARGET_OUTPUT,
+            LOG_OUTPUT,
+            L_TUPLE,
+            R_TUPLE,
+            L_LIST,
+            R_LIST,
+            #  TUPLE, LIST,
+            VARIABLE,
+            CONST,
+            GDB,
+            COMMA,
+            NL,
+            ASSIGN,
+        ]
+    )
+)
 
 Token = collections.namedtuple('Token', ['type', 'value'])
 ResultRecord = collections.namedtuple('ResultRecord', ['What', 'result_class', 'results'])
-AsyncRecord  = collections.namedtuple('AsyncRecord',  ['What', 'async_class', 'name', 'results'])
+AsyncRecord = collections.namedtuple('AsyncRecord', ['What', 'async_class', 'name', 'results'])
 StreamRecord = collections.namedtuple('StreamRecord', ['What', 'stream_class', 'output'])
 
 
@@ -55,21 +69,22 @@ class ParseError(Exception):
 
 
 class GDBOutputParse:
-
     def __init__(self):
-        self.debug, self.info, self.warn, self.error = (logger.debug,
-                                                        logger.info,
-                                                        logger.warn,
-                                                        logger.error)
+        self.debug, self.info, self.warn, self.error = (
+            logger.debug,
+            logger.info,
+            logger.warn,
+            logger.error,
+        )
         self.GDB_PROMPT = object()
         self.record_parse_func = {
-            'RESULT_CLASS'  : self.result_record,
-            'EXEC_CLASS'    : self.async_record,
-            'STATUS_CLASS'  : self.async_record,
-            'NOTIFY_CLASS'  : self.async_record,
+            'RESULT_CLASS': self.result_record,
+            'EXEC_CLASS': self.async_record,
+            'STATUS_CLASS': self.async_record,
+            'NOTIFY_CLASS': self.async_record,
             'CONSOLE_OUTPUT': self.stream_record,
-            'TARGET_OUTPUT' : self.stream_record,
-            'LOG_OUTPUT'    : self.stream_record,
+            'TARGET_OUTPUT': self.stream_record,
+            'LOG_OUTPUT': self.stream_record,
         }
         self.string_parser = literal_eval
 
@@ -82,7 +97,7 @@ class GDBOutputParse:
 
     def parse(self, text):
         self.tokens = GDBOutputParse.generate_tokens(text)
-        self.tok = None # Last symbol consumed
+        self.tok = None  # Last symbol consumed
         self.nexttok = None  # Next symbol tokenized
         self._advance()
 
@@ -241,7 +256,9 @@ class GDBOutputParse:
 
 def test(output):
     parser = GDBOutputParse()
-    print(parser.parse((output)))
+    result = parser.parse((output))
+    print(result)
+    return result
 
 
 def main(filename):
@@ -259,13 +276,35 @@ if __name__ == "__main__":
     #  import sys
     #  for tok in GDBOutputParse.generate_tokens(output):
     #      print(tok)
-    test1 = r'*stopped,reason="end-stepping-range",frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"' + '\n'
-    test2 = r'0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},state="stopped",core="1"}],current-thread-id="1"' + '\n'
-    test3 = r'*stopped,reason="end-stepping-range",frame={addr="0x0000000000411e80",func="callParallel_calculate",args=[{name="outputFilePath",value="\"./temp_data_www_2.dat\""},{name="save_png",value="true"}],file="/home/skt/code/freeformed_surface/src/generate_dat.cpp",fullname="/home/skt/code/freeformed_surface/src/generate_dat.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"' + '\n'
-    test4 = r'=breakpoint-created,bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<MULTIPLE>",times="0",original-location="npLocalHotSpotDetection"},{number="1.1",enabled="y",addr="0x000000000a1b7fa1",func="npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int, std::basic_ofstream<char, std::char_traits<char> >&, bool)",file="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",fullname="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",line="7048",thread-groups=["i1"]},{number="1.2",enabled="y",addr="0x000000000a1b96e8",func="npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int)",file="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",fullname="/icd/place_sh_1/zhentao/sandbox/global_persist_padding_19.20-d062_alter/fe/src/np/npKrep.c",line="7271",thread-groups=["i1"]},{number="1.3",enabled="y",addr="0x00002b07f6e52c40",at="<npLocalHotSpotDetection(int, unsigned int, bool, dbsHead*, std::pair<unsigned int, unsigned int>, int)@plt>",thread-groups=["i1"]}' + '\n'
+    test1 = (
+        r'*stopped,reason="end-stepping-range",'
+        + r'frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],'
+        + r'file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"'
+        + '\n'
+    )
+    test2 = (
+        r'0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",'
+        + r'frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},'
+        + r'state="stopped",core="1"}],current-thread-id="1"'
+        + '\n'
+    )
+    test3 = (
+        r'*stopped,reason="end-stepping-range",'
+        + r'frame={addr="0x0000000000411e80",func="callParallel_calculate",args=[{name="outputFilePath",value="\"./temp_data_www_2.dat\""},{name="save_png",value="true"}],'
+        + r'file="/home/skt/code/freeformed_surface/src/generate_dat.cpp",fullname="/home/skt/code/freeformed_surface/src/generate_dat.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"'
+        + '\n'
+    )
+    test4 = (
+        r'=breakpoint-created,bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<MULTIPLE>",times="0",original-location="fun"},'
+        + r'{number="1.1",enabled="y",addr="0x000000000a1b7fa1",func="fun()",'
+        + r'file="file1.c",fullname="file1.c",line="7048",thread-groups=["i1"]},'
+        + r'{number="1.2",enabled="y",addr="0x000000000a1b96e8",func="fun()",'
+        + r'file="file2.c",fullname="file2.c",line="7271",thread-groups=["i1"]},'
+        + r'{number="1.3",enabled="y",addr="0x00002b07f6e52c40",at="<fun()@plt>",thread-groups=["i1"]}'
+        + '\n'
+    )
     #  main(sys.argv[1])
     test(test1)
     test(test2)
     test(test3)
     test(test4)
-
