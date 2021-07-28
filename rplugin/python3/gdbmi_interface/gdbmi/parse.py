@@ -279,19 +279,19 @@ if __name__ == "__main__":
     test1 = (
         r'*stopped,reason="end-stepping-range",'
         + r'frame={addr="0x000000000040056e",func="seqsum",args=[{name="n",value="1000000"}],'
-        + r'file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"'
+        + r'file="ab.c",fullname="gdbmi.nvim/test/ab.c",line="4"},thread-id="1",stopped-threads="all",core="2"'
         + '\n'
     )
     test2 = (
         r'0005^done,threads=[{id="1",target-id="process 12398",name="test_gdbmi",'
-        + r'frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="/home/skt/code/gdbmi.nvim/test/ab.c",line="21"},'
+        + r'frame={level="0",addr="0x00000000004005c8",func="main",args=[],file="ab.c",fullname="gdbmi.nvim/test/ab.c",line="21"},'
         + r'state="stopped",core="1"}],current-thread-id="1"'
         + '\n'
     )
     test3 = (
         r'*stopped,reason="end-stepping-range",'
         + r'frame={addr="0x0000000000411e80",func="callParallel_calculate",args=[{name="outputFilePath",value="\"./temp_data_www_2.dat\""},{name="save_png",value="true"}],'
-        + r'file="/home/skt/code/freeformed_surface/src/generate_dat.cpp",fullname="/home/skt/code/freeformed_surface/src/generate_dat.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"'
+        + r'file="a.cpp",fullname="ab.cpp",line="326"},thread-id="1",stopped-threads="all",core="0"'
         + '\n'
     )
     test4 = (
@@ -303,8 +303,15 @@ if __name__ == "__main__":
         + r'{number="1.3",enabled="y",addr="0x00002b07f6e52c40",at="<fun()@plt>",thread-groups=["i1"]}'
         + '\n'
     )
+    test5 = (
+        r'=breakpoint-created,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="<MULTIPLE>",times="0",original-location="seqsum",'
+        + r'locations=[{number="2.1",enabled="y",addr="0x000000000040115e",func="seqsum(long)",file="ab.cpp",fullname="gdbmi.nvim/test/ab.cpp",line="5",thread-groups=["i1"]},'
+        + r'{number="2.2",enabled="y",addr="0x00000000004011d6",func="seqsum(long, long)",file="ab.cpp",fullname="gdbmi.nvim/test/ab.cpp",line="21",thread-groups=["i1"]}]}'
+        + '\r\n'
+    )
     #  main(sys.argv[1])
     test(test1)
     test(test2)
     test(test3)
     test(test4)
+    test(test5)

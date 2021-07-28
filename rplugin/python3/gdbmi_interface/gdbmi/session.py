@@ -195,6 +195,15 @@ class Session(object):
             to_call["proc"](tmp_kwds)
 
     def _update_breakpoint(self, obj):
+        def _set_breakpoint(info):
+            self.breakpoints.setdefault(info["number"], {}).update(info)
+            if "fullname" in info:
+                self.debug("set_breakpoint %s:%s", info["fullname"], info["line"])
+                self.ui.set_breakpoint(
+                    int(info["number"].replace(".", "")), info["fullname"], info["line"]
+                )
+                self.ui.jump(info["fullname"], info["line"])
+
         if obj.name == "breakpoint-deleted":
             info = self.breakpoints.pop(obj.results["id"], {})
             if "fullname" in info:
@@ -204,22 +213,24 @@ class Session(object):
                     self.ui.del_breakpoint(int(i["number"].replace(".", "")))
         else:
             info = obj.results["bkpt"]
-            if isinstance(info, list):
-                d = self.breakpoints.setdefault(info[0]["number"], {})
-                d.update(info[0])
-                d["multi"] = info[1:]
-                if obj.name == "breakpoint-created":
+            if obj.name == "breakpoint-created":
+                if isinstance(info, list):
+                    number = info[0]["number"]
+                    d = self.breakpoints.setdefault(info[0]["number"], {})
+                    d.update(info[0])
+                    d["multi"] = [i["number"] for i in info[1:]]
                     for i in info[1:]:
-                        if "fullname" in i:
-                            self.debug("set_breakpoint %s:%s", i["fullname"], i["line"])
-                            self.ui.set_breakpoint(
-                                int(i["number"].replace(".", "")), i["fullname"], i["line"]
-                            )
-            else:
-                self.breakpoints.setdefault(info["number"], {}).update(info)
-                if obj.name == "breakpoint-created" and "fullname" in info:
-                    self.ui.set_breakpoint(int(info["number"]), info["fullname"], info["line"])
-                    self.ui.jump(info["fullname"], info["line"])
+                        _set_breakpoint(i)
+                else:
+                    self.breakpoints.setdefault(info["number"], {}).update(info)
+                    if "fullname" in info:
+                        self.debug("set_breakpoint %s:%s", info["fullname"], info["line"])
+                        self.ui.set_breakpoint(int(info["number"]), info["fullname"], info["line"])
+                        self.ui.jump(info["fullname"], info["line"])
+                    elif "locations" in info:
+                        for i in info["locations"]:
+                            i['type'] = info['type']
+                            _set_breakpoint(i)
 
     def breakpoints_status(self, filename, line):
         for number, bkpt in self.breakpoints.items():
@@ -233,7 +244,14 @@ class Session(object):
         results = []
         for number, bkpt in self.breakpoints.items():
             if bkpt["type"] == "breakpoint" and bkpt["addr"] != "<MULTIPLE>":
-                results.append({"number": number, "filename": bkpt["fullname"], "lnum": bkpt["line"], "text": bkpt["func"]})
+                results.append(
+                    {
+                        "number": number,
+                        "filename": bkpt["fullname"],
+                        "lnum": bkpt["line"],
+                        "text": bkpt["func"],
+                    }
+                )
         return results
 
     def wait_for(self, token):
