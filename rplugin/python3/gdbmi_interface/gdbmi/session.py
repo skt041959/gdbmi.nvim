@@ -216,7 +216,7 @@ class Session(object):
             if obj.name == "breakpoint-created":
                 if isinstance(info, list):
                     number = info[0]["number"]
-                    d = self.breakpoints.setdefault(info[0]["number"], {})
+                    d = self.breakpoints.setdefault(number, {})
                     d.update(info[0])
                     d["multi"] = [i["number"] for i in info[1:]]
                     for i in info[1:]:
