@@ -238,7 +238,9 @@ function! gdbmi#util#scroll(action) abort
   if !exists('t:gdbmi_channel_id') | return | endif
   execute 'noautocmd silent!' t:gdbmi_win_jump_window 'wincmd w'
   execute 'normal!' a:action
-  noautocmd silent! wincmd p
+  if winnr() != t:gdbmi_win_jump_window
+    noautocmd silent! wincmd p
+  endif
 endfunction
 
 "}}}
