@@ -112,19 +112,21 @@ function! gdbmi#util#clear_sign() abort
 endfunction
 
 function! gdbmi#util#jump(file, line) abort
-  let l:target_buf = bufnr(a:file, 1)
-  call bufload(l:target_buf)
-  call setbufvar(l:target_buf, '&buflisted', v:true)
-  let l:target_win = bufwinid(l:target_buf)
-  if l:target_win == -1
-    let l:target_win = win_getid(t:gdbmi_win_jump_window)
+  if bufloaded(a:file)
+    let l:target_buf = bufnr(a:file, 0)
+    let l:target_win_id = bufwinid(l:target_buf)
+    if l:target_win_id == -1
+      let l:target_win_id = win_getid(t:gdbmi_win_jump_window)
+    endif
+    call nvim_win_set_buf(l:target_win_id, l:target_buf)
+  else
+    execute t:gdbmi_win_jump_window 'wincmd w'
+    drop +`=a:line` `=a:file`
+    let l:target_buf = bufnr()
+    let l:target_win_id = bufwinid(l:target_buf)
   endif
 
-  if nvim_win_get_buf(l:target_win) != l:target_buf
-    call nvim_win_set_buf(l:target_win, l:target_buf)
-  endif
-
-  call nvim_win_set_cursor(l:target_win, [str2nr(a:line), 1])
+  call nvim_win_set_cursor(l:target_win_id, [str2nr(a:line), 1])
   return l:target_buf
 endfunction
 
