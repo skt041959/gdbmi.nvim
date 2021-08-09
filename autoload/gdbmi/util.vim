@@ -120,10 +120,12 @@ function! gdbmi#util#jump(file, line) abort
     endif
     call nvim_win_set_buf(l:target_win_id, l:target_buf)
   else
-    execute t:gdbmi_win_jump_window 'wincmd w'
+    let curr_win = winnr()
+    execute 'noautocmd' t:gdbmi_win_jump_window 'wincmd w'
     drop +`=a:line` `=a:file`
     let l:target_buf = bufnr()
     let l:target_win_id = bufwinid(l:target_buf)
+    execute 'noautocmd' curr_win 'wincmd w'
   endif
 
   call nvim_win_set_cursor(l:target_win_id, [str2nr(a:line), 1])
