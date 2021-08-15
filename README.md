@@ -28,24 +28,24 @@ or launch with any argument
 
 ## Keymap
 
-  | Default Mapping | Mode | Command                | Description                             |  
---|-----------------|------|------------------------|-----------------------------------------|  
-  | `<leader>dn`    | n    | :GDBMINext             | `next`                                  |  
-  | `<leader>ds`    | n    | :GDBMIStep             | `step`                                  |  
-  | `<leader>dc`    | n    | :GDBMIContinue         | `continue`                              |  
-  | `<leader>da`    | n    | :GDBMIAdvance          | `advance`                               |  
-  | `<leader>du`    | n    | :GDBMIUntil            | `until`                                 |  
-  | `<leader>df`    | n    | :GDBMIFinish           | `finish`                                |  
-  | `<leader>db`    | n,v  | :GDBMIBreakpointToggle | `break`                                 |  
-  | `<leader>dU`    | n    | :GDBMIFrameUp          | `up`                                    |  
-  | `<leader>dD`    | n    | :GDBMIFrameDown        | `down`                                  |  
-  | `<leader>de`    | n,v  | :GDBMIEvalWord         | `print <cword>`                         |  
-  | `<leader>dp`    | n    |                        | jump to the current line in code window |  
-  | `<leader>dd`    | n    |                        | jump to or raise up the gdb window      |  
-  | `<up>`          | t    |                        | scroll code window up                   |  
-  | `<down>`        | t    |                        | scroll code window down                 |  
-  | `<pageup>`      | t    |                        | scroll code window page up              |  
-  | `<pagedown>`    | t    |                        | scroll code window page down            |  
+| Default Mapping | Mode | Command                | Description                             |  
+|-----------------|------|------------------------|-----------------------------------------|  
+| `<leader>dn`    | n    | :GDBMINext             | `next`                                  |  
+| `<leader>ds`    | n    | :GDBMIStep             | `step`                                  |  
+| `<leader>dc`    | n    | :GDBMIContinue         | `continue`                              |  
+| `<leader>da`    | n    | :GDBMIAdvance          | `advance`                               |  
+| `<leader>du`    | n    | :GDBMIUntil            | `until`                                 |  
+| `<leader>df`    | n    | :GDBMIFinish           | `finish`                                |  
+| `<leader>db`    | n,v  | :GDBMIBreakpointToggle | `break`                                 |  
+| `<leader>dU`    | n    | :GDBMIFrameUp          | `up`                                    |  
+| `<leader>dD`    | n    | :GDBMIFrameDown        | `down`                                  |  
+| `<leader>de`    | n,v  | :GDBMIEvalWord         | `print <cword>`                         |  
+| `<leader>dp`    | n    |                        | jump to the current line in code window |  
+| `<leader>dd`    | n    |                        | jump to or raise up the gdb window      |  
+| `<up>`          | t    |                        | scroll code window up                   |  
+| `<down>`        | t    |                        | scroll code window down                 |  
+| `<pageup>`      | t    |                        | scroll code window page up              |  
+| `<pagedown>`    | t    |                        | scroll code window page down            |  
 
 ### Change keymap
 
